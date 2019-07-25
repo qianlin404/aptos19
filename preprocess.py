@@ -26,12 +26,14 @@ def load_iamges(filenames: List[str], size=(299, 299)) -> np.ndarray:
     Returns:
         image_tensor
     """
-    pool = Pool(10)
+    # pool = Pool(10)
     load_func = partial(_load_images, size=size)
 
-    res = pool.map(load_func, filenames)
-    pool.close()
+    # res = pool.map(load_func, filenames)
 
+    # pool.close()
+
+    res = [load_func(f) for f in filenames]
     return np.concatenate(res)
 
 
