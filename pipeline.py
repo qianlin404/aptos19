@@ -19,7 +19,7 @@ from functools import partial
 from typing import Callable, Tuple, Dict, List
 
 
-def get_image_paths(image_dir, id_code):
+def get_image_paths(id_code, image_dir):
     """
     Get image path by concatenating image directory with image code id and suffix
     Args:
