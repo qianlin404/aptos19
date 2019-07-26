@@ -174,7 +174,7 @@ class KerasPipeline(object):
         print(json.dumps(self.optimizer_params))
         optimizer = self.optimizer(**self.optimizer_params)
 
-        print("{t:<20}: {loss}".format(t="Loss Function", loss=loss.__name__))
+        print("{t:<20}: {loss}".format(t="Loss Function", loss=self.loss.__name__))
         model.compile(optimizer, loss=self.loss, metrics=self.eval_metrics)
 
         return model
