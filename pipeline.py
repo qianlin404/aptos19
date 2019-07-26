@@ -129,7 +129,7 @@ class KerasPipeline(object):
     def _get_save_dir(self):
         folder_name = ""
         for k, v in self.eval.items():
-            folder_name += "{k}={v.2f}_".format(k=k, v=v)
+            folder_name += "{k}={v:.2f}_".format(k=k, v=v)
         folder_name += str(self.created_time)
 
         return str(Path("models/") / folder_name)
