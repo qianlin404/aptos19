@@ -19,19 +19,19 @@ from functools import partial
 from typing import Callable, Tuple, Dict, List
 
 
-def get_image_paths(image_dir, code_id):
+def get_image_paths(image_dir, id_code):
     """
     Get image path by concatenating image directory with image code id and suffix
     Args:
         image_dir: image directory
-        code_id: image code ID
+        id_code: image code ID
 
     Returns:
         image_path: str
 
     """
     suffix = ".png"
-    return os.path.join(image_dir, code_id + suffix)
+    return os.path.join(image_dir, id_code + suffix)
 
 
 class KerasPipeline(object):
@@ -142,8 +142,8 @@ class KerasPipeline(object):
         print("{t:<20}: {training_filename}".format(t="valiation set", training_filename=self.validation_filename))
 
         get_path_fn = partial(get_image_paths, image_dir=self.image_dir)
-        self.training_set["path"] = self.training_set["code_id"].apply(get_path_fn)
-        self.validation_set["path"] = self.validation_set["code_id"].apply(get_path_fn)
+        self.training_set["path"] = self.training_set["id_code"].apply(get_path_fn)
+        self.validation_set["path"] = self.validation_set["id_code"].apply(get_path_fn)
 
         self.training_samples = self.training_set.shape[0]
         self.validation_samples = self.validation_set.shape[0]
