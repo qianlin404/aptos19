@@ -100,12 +100,6 @@ class KerasPipeline(object):
         self.val_generator = None
 
         self.eval = {}
-        for e in self.eval_metrics:
-            if isinstance(e, str):
-                self.eval[e] = None
-            else:
-                self.eval[e.__name__] = None
-
         self.created_time = int(time.time())
 
     def write_config(self):
@@ -212,11 +206,10 @@ class KerasPipeline(object):
 
         logdir = "tensorboard/" + self.name + "_" + str(self.created_time)
         tb_callback = tf.keras.callbacks.TensorBoard(log_dir=logdir, write_graph=False)
-        cv_callback = tf.keras.callbacks.LambdaCallback(on_batch_end=lambda epoch, logs: self._cv)
 
         self.model.fit_generator(self.train_generator, steps_per_epoch=len(self.train_generator),
                                  validation_data=self.val_generator, validation_steps=len(self.val_generator),
-                                 epochs=self.num_epochs, callbacks=[tb_callback, cv_callback])
+                                 epochs=self.num_epochs, callbacks=[tb_callback])
 
         metric_value = self._cv()
 
