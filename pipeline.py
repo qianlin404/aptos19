@@ -51,6 +51,7 @@ class KerasPipeline(object):
                  regularizer: Callable,
                  regularizer_params: Dict,
                  eval_metrics: List[Callable],
+                 cv_fn: Callable,
                  name: str):
         """
         Initializer
@@ -69,6 +70,7 @@ class KerasPipeline(object):
             regularizer: regularizer function
             regularizer_params: regularizer parameters
             eval_metrics: evaluation metrics
+            cv_fn: Cross validation function
             name: name of this run
         """
         self.training_filename = training_filename
@@ -85,6 +87,7 @@ class KerasPipeline(object):
         self.regularizer = regularizer
         self.regularizer_params = regularizer_params
         self.eval_metrics = eval_metrics
+        self.cv_fn = cv_fn
         self.name = name
 
         # Placeholders
@@ -92,6 +95,9 @@ class KerasPipeline(object):
         self.validation_set = None
         self.training_samples = None
         self.validation_samples = None
+        self.model = None
+        self.train_generator = None
+        self.val_generator = None
 
         self.eval = {}
         for e in self.eval_metrics:
@@ -179,21 +185,40 @@ class KerasPipeline(object):
 
         return model
 
+    def _cv(self):
+        """ Cross validation """
+        y_true = []
+        y_pred = []
+
+        for i in range(len(self.val_generator)):
+            image, label = self.val_generator[i]
+            pred = self.model.predict(image)
+            pred = np.argmax(pred, axis=1).ravel()
+            y_true.append(label)
+            y_pred.append(pred)
+
+        y_true = np.concatenate(y_true)
+        y_pred = np.concatenate(y_pred)
+
+        score = self.cv_fn(y_true, y_pred)
+
+        print("{metric_name}: {score:.2f}".format(metric_name=self.cv_fn.__name__, score=score))
+        return score
+
     def train(self):
         self._read_input()
-        train_generator, val_generator = self._get_input_generator()
-        model = self._build_model()
+        self.train_generator, self.val_generator = self._get_input_generator()
+        self.model = self._build_model()
 
         logdir = "tensorboard/" + self.name + "_" + str(self.created_time)
         callback = tf.keras.callbacks.TensorBoard(log_dir=logdir, write_graph=False)
 
-        model.fit_generator(train_generator, steps_per_epoch=len(train_generator),
-                            validation_data=val_generator, validation_steps=len(train_generator),
-                            epochs=self.num_epochs, callbacks=[callback])
+        self.model.fit_generator(self.train_generator, steps_per_epoch=len(self.train_generator),
+                                 validation_data=self.val_generator, validation_steps=len(self.val_generator),
+                                 epochs=self.num_epochs, callbacks=[callback, self._cv])
 
-        metric_values = model.evaluate_generator(val_generator)
+        metric_value = self._cv()
 
-        for k, v in zip(model.metrics_names, metric_values):
-            self.eval[k] = v
+        self.eval[self.cv_fn.__name__] = metric_value
 
         self.write_config()

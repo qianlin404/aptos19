@@ -68,12 +68,14 @@ def mean_std_normalization(tensor: np.ndarray, mean_value: Tuple=(105.53, 56.36,
 
 class ImageGenerator(tf.keras.utils.Sequence):
     """ Generate batched images """
-    def __init__(self, df: pd.DataFrame , batch_size: int, image_size: Tuple, preprocess_fn: Callable, seed=404):
+    def __init__(self, df: pd.DataFrame , batch_size: int, image_size: Tuple,
+                 preprocess_fn: Callable, is_test: bool=False, seed=404):
         self._image_data = df
         self._batch_size = batch_size
         self._image_size = image_size
         self._preprocess_fn = preprocess_fn
         self._seed = seed
+        self._is_test = is_test
 
         np.random.seed(self._seed)
         indexes = np.array([i for i in range(self.__len__() * self._batch_size)])
@@ -85,8 +87,11 @@ class ImageGenerator(tf.keras.utils.Sequence):
     def __getitem__(self, item):
         """ Return a generator that generate (images, label) tuple """
         i = self._batch_index[item]
-        labels = self._image_data.iloc[i]["diagnosis"].values
         images = load_iamges(self._image_data["path"].iloc[i], size=self._image_size)
         images = self._preprocess_fn(images)
 
-        return (images, labels)
+        if self._is_test:
+            return images
+        else:
+            labels = self._image_data.iloc[i]["diagnosis"].values
+            return images, labels
