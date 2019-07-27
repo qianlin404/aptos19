@@ -211,11 +211,12 @@ class KerasPipeline(object):
         self.model = self._build_model()
 
         logdir = "tensorboard/" + self.name + "_" + str(self.created_time)
-        callback = tf.keras.callbacks.TensorBoard(log_dir=logdir, write_graph=False)
+        tb_callback = tf.keras.callbacks.TensorBoard(log_dir=logdir, write_graph=False)
+        cv_callback = tf.keras.callbacks.LambdaCallback(on_batch_end=self._cv)
 
         self.model.fit_generator(self.train_generator, steps_per_epoch=len(self.train_generator),
                                  validation_data=self.val_generator, validation_steps=len(self.val_generator),
-                                 epochs=self.num_epochs, callbacks=[callback, self._cv])
+                                 epochs=self.num_epochs, callbacks=[tb_callback, cv_callback])
 
         metric_value = self._cv()
 
