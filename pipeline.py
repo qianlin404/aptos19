@@ -120,6 +120,7 @@ class KerasPipeline(object):
                       evaluation=evaluation)
 
         save_dir = self._get_save_dir()
+        os.makedirs(save_dir, exist_ok=True)
         save_filename = os.path.join(save_dir, "config.json")
 
         print("[INFO] Saving config to {}".format(save_filename))
@@ -216,3 +217,7 @@ class KerasPipeline(object):
         self.eval[self.cv_fn.__name__] = metric_value
 
         self.write_config()
+
+    def save(self):
+        tf.contrib.saved_model.save_keras_model(self.model, self._get_save_dir())
+
