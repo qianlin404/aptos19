@@ -179,7 +179,7 @@ class KerasPipeline(object):
         train.show_sample()
 
         print("Loading validation data...")
-        val = preprocess.ImageGenerator(self.validation_set, image_size=self.image_size, batch_size=1,
+        val = preprocess.ImageGenerator(self.validation_set, image_size=self.image_size, batch_size=self.batch_size,
                                         preprocess_fn=self.preprocess_fn, augment_fn=self.augment_fn,
                                         load_fn=self.load_fn)
         val.show_sample()
