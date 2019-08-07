@@ -116,7 +116,7 @@ class KerasPipeline(object):
                             training_samples=self.training_samples,
                             validation_samples=self.validation_samples)
         preprocess_config = dict(load_fn=self.load_fn.__name__,
-                                 augment_fn=self.augment_fn,
+                                 augment_fn=self.augment_fn.__name__,
                                  preprocess_func=self.preprocess_fn.__name__,
                                  image_size=self.image_size)
         optimizer_config = dict(name=self.optimizer.__name__, params=self.optimizer_params)
