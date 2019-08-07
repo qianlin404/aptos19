@@ -107,6 +107,7 @@ class KerasPipeline(object):
 
         self.eval = {}
         self.created_time = int(time.time())
+        os.makedirs(self._get_save_dir(), exist_ok=True)
 
     def write_config(self):
         input_config = dict(training_filename=self.training_filename,
@@ -128,7 +129,6 @@ class KerasPipeline(object):
                       evaluation=evaluation)
 
         save_dir = self._get_save_dir()
-        os.makedirs(save_dir, exist_ok=True)
         save_filename = os.path.join(save_dir, "config.json")
 
         print("[INFO] Saving config to {}".format(save_filename))
