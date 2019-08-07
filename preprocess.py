@@ -129,7 +129,7 @@ def crop_and_ben_normalized(filenames: List[str], image_size: Tuple):
 
 class ImageGenerator(tf.keras.utils.Sequence):
     """ Generate batched images """
-    def __init__(self, df: pd.DataFrame , batch_size: int, image_size: Tuple, load_fn: Callable, augment_fn: Callable,
+    def __init__(self, df: pd.DataFrame, batch_size: int, image_size: Tuple, load_fn: Callable, augment_fn: Callable,
                  preprocess_fn: Callable, is_test: bool=False, is_augment: bool=False, seed=404):
         self._image_data = df
         self._batch_size = batch_size
@@ -151,7 +151,7 @@ class ImageGenerator(tf.keras.utils.Sequence):
     def __getitem__(self, item):
         """ Return a generator that generate (images, label) tuple """
         i = self._batch_index[item]
-        images = self._load_fn(self._image_data["path"].iloc[i], size=self._image_size)
+        images = self._load_fn(self._image_data["path"].iloc[i], self._image_size)
 
         if self._is_test:
             labels = None
