@@ -178,9 +178,9 @@ class ImageGenerator(tf.keras.utils.Sequence):
         if self._is_augment:
             images, labels = self._augment_fn(images, labels)
 
-        row = np.ceil(len(images) / 5)
+        num_row = int(np.ceil(len(images) / 5))
 
-        fig, axes = plt.subplots(row, 5, figsize=(12, 12))
+        fig, axes = plt.subplots(num_row, 5, figsize=(12, 12))
 
         for i in range(len(images)):
             row = i // 5
