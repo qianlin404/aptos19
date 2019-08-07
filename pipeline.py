@@ -40,6 +40,8 @@ class KerasPipeline(object):
                  training_filename: str,
                  validation_filename: str,
                  image_dir: str,
+                 load_fn: Callable,
+                 augment_fn: Callable,
                  preprocess_fn: Callable,
                  image_size: Tuple,
                  batch_size: int,
@@ -59,6 +61,8 @@ class KerasPipeline(object):
             training_filename: training set file path
             validation_filename: validation set file path
             image_dir: image directory
+            load_fn: function to load image
+            augment_fn: function to perform data augmentation
             preprocess_fn: preprocess function
             image_size: image size in (H, W) format
             batch_size: batch size for training
@@ -76,6 +80,8 @@ class KerasPipeline(object):
         self.training_filename = training_filename
         self.validation_filename = validation_filename
         self.image_dir = image_dir
+        self.load_fn = load_fn
+        self.augment_fn = augment_fn
         self.preprocess_fn = preprocess_fn
         self.image_size = image_size
         self.batch_size = batch_size
@@ -108,7 +114,9 @@ class KerasPipeline(object):
                             image_dir=self.image_dir,
                             training_samples=self.training_samples,
                             validation_samples=self.validation_samples)
-        preprocess_config = dict(preprocess_func=self.preprocess_fn.__name__,
+        preprocess_config = dict(load_fn=self.load_fn.__name__,
+                                 augment_fn=self.augment_fn,
+                                 preprocess_func=self.preprocess_fn.__name__,
                                  image_size=self.image_size)
         optimizer_config = dict(name=self.optimizer.__name__, params=self.optimizer_params)
         regularizer_config = dict(name=self.regularizer.__name__, params=self.regularizer_params)
@@ -128,12 +136,23 @@ class KerasPipeline(object):
             f.write(json.dumps(config))
 
     def _get_save_dir(self):
-        folder_name = ""
-        for k, v in self.eval.items():
-            folder_name += "{k}={v:.2f}_".format(k=k, v=v)
-        folder_name += str(self.created_time)
-
+        folder_name = str(self.created_time)
         return str(Path("models/") / folder_name)
+
+    def _get_callback(self):
+        """ Get callbacks for the model """
+        checkpoint = tf.keras.callbacks.ModelCheckpoint(os.path.join(self._get_save_dir(),
+                                                                     "weights.{epoch:02d}-{val_loss:.2f}.h5"),
+                                                        monitor="val_loss", save_best_only=True, save_weights_only=True,
+                                                        mode="min")
+        early_stop = tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=9, mode="min",
+                                                      restore_best_weights=True)
+        lr_decay = tf.keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=.5, patience=3, mode="min")
+
+        logdir = "tensorboard/" + self.name + "_" + str(self.created_time)
+        tensorboard = tf.keras.callbacks.TensorBoard(log_dir=logdir, write_graph=False, update_freq="epoch")
+
+        return [checkpoint, early_stop, lr_decay, tensorboard]
 
     def _read_input(self):
         """ Run input """
@@ -205,12 +224,9 @@ class KerasPipeline(object):
         self.train_generator, self.val_generator = self._get_input_generator()
         self.model = self._build_model()
 
-        logdir = "tensorboard/" + self.name + "_" + str(self.created_time)
-        tb_callback = tf.keras.callbacks.TensorBoard(log_dir=logdir, write_graph=False, update_freq="batch")
-
         self.model.fit_generator(self.train_generator, steps_per_epoch=len(self.train_generator),
                                  validation_data=self.val_generator, validation_steps=len(self.val_generator),
-                                 epochs=self.num_epochs, callbacks=[tb_callback])
+                                 epochs=self.num_epochs, callbacks=self._get_callback())
 
         metric_value = self._cv()
 

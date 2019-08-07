@@ -9,14 +9,14 @@
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+import cv2
 
 from PIL import Image
 from typing import List, Tuple, Callable
-from multiprocessing import Pool
 from functools import partial
 
 
-def load_iamges(filenames: List[str], size=(299, 299)) -> np.ndarray:
+def load_default(filenames: List[str], size=(299, 299)) -> np.ndarray:
     """
     Load image into tensor given filenames
     Args:
@@ -26,18 +26,12 @@ def load_iamges(filenames: List[str], size=(299, 299)) -> np.ndarray:
     Returns:
         image_tensor
     """
-    # pool = Pool(10)
-    load_func = partial(_load_images, size=size)
 
-    # res = pool.map(load_func, filenames)
-
-    # pool.close()
-
-    res = [load_func(f) for f in filenames]
-    return np.concatenate(res)
+    res = [cv2.resize(_load_image(f), size) for f in filenames]
+    return res
 
 
-def _load_images(filename: str, size) -> np.ndarray:
+def _load_image(filename: str) -> np.ndarray:
     """
     Load single image and resize
     Args:
@@ -47,35 +41,105 @@ def _load_images(filename: str, size) -> np.ndarray:
     Returns:
         image_tensor
     """
-    img = Image.open(filename).resize(size)
-    return np.expand_dims(np.array(img), axis=0)
+    img = cv2.imread(filename)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    return img
 
 
-def mean_std_normalization(tensor: np.ndarray, mean_value: Tuple=(105.53, 56.36, 18.79),
+def load_ben_color(path: str, image_size: Tuple, sigmaX: int=10):
+    """
+    Perform ben's preprocess method
+    Args:
+        path: path to image file
+        image_size: size of the output image
+        sigmaX: sigmaX for x weight
+
+    Returns:
+
+    """
+    image = _load_image(path)
+    image = crop_image_from_gray(image)
+    image = cv2.resize(image, image_size)
+    image = cv2.addWeighted(image, 4, cv2.GaussianBlur(image, (0, 0), sigmaX), -4, 128)
+
+    return image
+
+
+def crop_image_from_gray(img: np.ndarray, tol=7):
+    """
+    Crop the image from gray
+    Args:
+        img: ndarray, in (H, W, C) format
+        tol: int
+
+    Returns:
+
+    """
+    if img.ndim == 2:
+        mask = img > tol
+        return img[np.ix_(mask.any(1), mask.any(0))]
+    elif img.ndim == 3:
+        gray_img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+        mask = gray_img > tol
+
+        check_shape = img[:, :, 0][np.ix_(mask.any(1), mask.any(0))].shape[0]
+        if (check_shape == 0):  # image is too dark so that we crop out everything,
+            return img  # return original image
+        else:
+            img1 = img[:, :, 0][np.ix_(mask.any(1), mask.any(0))]
+            img2 = img[:, :, 1][np.ix_(mask.any(1), mask.any(0))]
+            img3 = img[:, :, 2][np.ix_(mask.any(1), mask.any(0))]
+            #         print(img1.shape,img2.shape,img3.shape)
+            img = np.stack([img1, img2, img3], axis=-1)
+        #         print(img.shape)
+        return img
+
+
+def mean_std_normalization(images: List[np.ndarray], mean_value: Tuple=(105.53, 56.36, 18.79),
                            std_value: Tuple=(60.93, 33.67, 12.66)) -> np.ndarray:
     """
     Perform mean std normalization
     Args:
-        tensor: batched image array in [N, H, W, C] format
+        images: list of ndarray in [H, W, C] format
         mean_value: 3-Tuple of mean values for (R, G, B) channels
         std_value: 3-Tuple of std values for (R, G, B) channels
 
     Returns:
         normalized_tensor: normalized tensor
     """
+    tensor = np.concatenate([np.expand_dims(img, axis=0) for img in images], axis=0)
     return (tensor - mean_value) / std_value
+
+
+def crop_and_ben_normalized(filenames: List[str], image_size: Tuple):
+    """
+    Crop and do ben's preprocess method
+    Args:
+        filenames: filename of images
+        image_size: image size in (H, W) format
+
+    Returns:
+        preprocessed_image:
+    """
+    preprocessed_image = [load_ben_color(filename, image_size) for filename in filenames]
+    preprocessed_image = [crop_image_from_gray(image) for image in preprocessed_image]
+
+    return preprocessed_image
 
 
 class ImageGenerator(tf.keras.utils.Sequence):
     """ Generate batched images """
-    def __init__(self, df: pd.DataFrame , batch_size: int, image_size: Tuple,
-                 preprocess_fn: Callable, is_test: bool=False, seed=404):
+    def __init__(self, df: pd.DataFrame , batch_size: int, image_size: Tuple, load_fn: Callable, augment_fn: Callable,
+                 preprocess_fn: Callable, is_test: bool=False, is_augment: bool=False, seed=404):
         self._image_data = df
         self._batch_size = batch_size
         self._image_size = image_size
         self._preprocess_fn = preprocess_fn
         self._seed = seed
         self._is_test = is_test
+        self._is_augment = is_augment
+        self._load_fn = load_fn
+        self._augment_fn = augment_fn
 
         np.random.seed(self._seed)
         indexes = np.array([i for i in range(self.__len__() * self._batch_size)])
@@ -87,11 +151,18 @@ class ImageGenerator(tf.keras.utils.Sequence):
     def __getitem__(self, item):
         """ Return a generator that generate (images, label) tuple """
         i = self._batch_index[item]
-        images = load_iamges(self._image_data["path"].iloc[i], size=self._image_size)
-        images = self._preprocess_fn(images)
+        images = self._load_fn(self._image_data["path"].iloc[i], size=self._image_size)
 
         if self._is_test:
-            return images
+            labels = None
         else:
             labels = self._image_data.iloc[i]["diagnosis"].values
-            return images, labels
+
+        if self._is_augment:
+            images, labels = self._augment_fn(images, labels)
+
+        images = self._preprocess_fn(images)
+
+        return images, labels
+
+
