@@ -10,10 +10,9 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 import cv2
+import matplotlib.pyplot as plt
 
-from PIL import Image
 from typing import List, Tuple, Callable
-from functools import partial
 
 
 def load_default(filenames: List[str], size=(299, 299)) -> np.ndarray:
@@ -165,4 +164,28 @@ class ImageGenerator(tf.keras.utils.Sequence):
 
         return images, labels
 
+    def show_sample(self):
+        """ Get sample images """
+        index = np.random.randint(0, self.__len__())
+        batch = self._batch_index[index]
+        images = self._load_fn(self._image_data["path"].iloc[batch], self._image_size)
+
+        if self._is_test:
+            labels = None
+        else:
+            labels = self._image_data.iloc[batch]["diagnosis"].values
+
+        if self._is_augment:
+            images, labels = self._augment_fn(images, labels)
+
+        row = np.ceil(len(images) / 5)
+
+        fig, axes = plt.subplots(row, 5, figsize=(12, 12))
+
+        for i in range(len(images)):
+            row = i // 5
+            col = i % 5
+            axes[row][col].imshow(images[i])
+            axes[row][col].set_title(str(labels[i]))
+        plt.show()
 
