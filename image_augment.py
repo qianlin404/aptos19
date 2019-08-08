@@ -194,7 +194,7 @@ def color(images: np.ndarray):
     if images.ndim == 4:
         aug_images = np.empty(shape=images.shape)
         for i, image in enumerate(images):
-            image_obj = Image.fromarray(image).convert('L')
+            image_obj = Image.fromarray(image).convert('L').convert("RGB")
             aug_images[i] = np.array(image_obj, dtype=images.dtype)
 
     elif images.ndim == 3:
