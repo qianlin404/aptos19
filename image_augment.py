@@ -13,7 +13,7 @@ from PIL import Image, ImageOps
 from typing import Callable, List
 
 
-def cutout(images, pad_size=16, replace=0):
+def cutout(images: np.ndarray, pad_size=16, replace=0):
     """Apply cutout (https://arxiv.org/abs/1708.04552) to image.
     This operation applies a (2*pad_size x 2*pad_size) mask of zeros to
     a random location within `img`. The pixel values filled in will be of the
@@ -30,8 +30,37 @@ def cutout(images, pad_size=16, replace=0):
     An image Tensor that is of type uint8.
     """
 
-    images_aug = []
-    for image in images:
+    if images.ndim == 4:
+        images_aug = np.empty(images.shape, dtype=images.dtype)
+        for i, image in enumerate(images):
+            image_height = image.shape[0]
+            image_width = image.shape[1]
+
+            # Sample the center location in the image where the zero mask will be applied.
+            cutout_center_height = np.random.randint(0, image_height, dtype=np.int32)
+
+            cutout_center_width = np.random.randint(0, image_width, dtype=np.int32)
+
+            lower_pad = np.max([0, cutout_center_height - pad_size])
+            upper_pad = np.max([0, image_height - cutout_center_height - pad_size])
+            left_pad = np.max([0, cutout_center_width - pad_size])
+            right_pad = np.max([0, image_width - cutout_center_width - pad_size])
+
+            cutout_shape = [image_height - (lower_pad + upper_pad),
+                          image_width - (left_pad + right_pad)]
+            padding_dims = [[lower_pad, upper_pad], [left_pad, right_pad]]
+            mask = np.pad(
+              np.zeros(cutout_shape, dtype=image.dtype),
+              padding_dims, constant_values=1)
+            mask = np.expand_dims(mask, -1)
+            mask = np.tile(mask, [1, 1, 3])
+            image = np.where(
+              np.equal(mask, 0),
+              np.ones_like(image, dtype=image.dtype) * replace,
+              image)
+            images_aug[i] = image
+    elif images.ndim == 3:
+        image = images
         image_height = image.shape[0]
         image_width = image.shape[1]
 
@@ -46,18 +75,20 @@ def cutout(images, pad_size=16, replace=0):
         right_pad = np.max([0, image_width - cutout_center_width - pad_size])
 
         cutout_shape = [image_height - (lower_pad + upper_pad),
-                      image_width - (left_pad + right_pad)]
+                        image_width - (left_pad + right_pad)]
         padding_dims = [[lower_pad, upper_pad], [left_pad, right_pad]]
         mask = np.pad(
-          np.zeros(cutout_shape, dtype=image.dtype),
-          padding_dims, constant_values=1)
+            np.zeros(cutout_shape, dtype=image.dtype),
+            padding_dims, constant_values=1)
         mask = np.expand_dims(mask, -1)
         mask = np.tile(mask, [1, 1, 3])
         image = np.where(
-          np.equal(mask, 0),
-          np.ones_like(image, dtype=image.dtype) * replace,
-          image)
-        images_aug.append(image)
+            np.equal(mask, 0),
+            np.ones_like(image, dtype=image.dtype) * replace,
+            image)
+        images_aug = image
+    else
+        raise RuntimeError("Unexpecte shape {}".format(images.shape))
     return images_aug
 
 
