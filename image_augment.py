@@ -87,8 +87,9 @@ def cutout(images: np.ndarray, pad_size=16, replace=0):
             np.ones_like(image, dtype=image.dtype) * replace,
             image)
         images_aug = image
-    else
+    else:
         raise RuntimeError("Unexpecte shape {}".format(images.shape))
+
     return images_aug
 
 
