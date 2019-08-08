@@ -110,7 +110,7 @@ def equalize(images: np.ndarray):
     """
     # image batches
     if images.ndim == 4:
-        aug_images = np.empty(shape=images.shape)
+        aug_images = np.empty(shape=images.shape, dtype=images.dtype)
         for i, image in enumerate(images):
             image_obj = Image.fromarray(image)
             image_obj = ImageOps.equalize(image_obj)
@@ -120,6 +120,7 @@ def equalize(images: np.ndarray):
     elif images.ndim == 3:
         aug_images = Image.fromarray(images)
         aug_images = ImageOps.equalize(aug_images)
+        aug_images = np.array(aug_images, dtype=images.dtype)
 
     else:
         raise RuntimeError("Unknow image shape {}".format(images.shape))
@@ -139,7 +140,7 @@ def solarize(images: np.ndarray, threshold: int):
     """
     # image batches
     if images.ndim == 4:
-        aug_images = np.empty(shape=images.shape)
+        aug_images = np.empty(shape=images.shape, dtype=images.dtype)
         for i, image in enumerate(images):
             image_obj = Image.fromarray(image)
             image_obj = ImageOps.solarize(image_obj, threshold)
@@ -147,7 +148,7 @@ def solarize(images: np.ndarray, threshold: int):
 
     elif images.ndim == 3:
         aug_images = Image.fromarray(images)
-        aug_images = ImageOps.solarize(aug_images, threshold)
+        aug_images = np.array(ImageOps.solarize(aug_images, threshold), dtype=images.dtype)
 
     else:
         raise RuntimeError("Unknow image shape {}".format(images.shape))
@@ -166,7 +167,7 @@ def posterize(images: np.ndarray, bit: int):
     """
     # image batches
     if images.ndim == 4:
-        aug_images = np.empty(shape=images.shape)
+        aug_images = np.empty(shape=images.shape, dtype=images.dtype)
         for i, image in enumerate(images):
             image_obj = Image.fromarray(image)
             image_obj = ImageOps.posterize(image_obj, bit)
@@ -175,6 +176,7 @@ def posterize(images: np.ndarray, bit: int):
     elif images.ndim == 3:
         aug_images = Image.fromarray(images)
         aug_images = ImageOps.posterize(aug_images, bit)
+        aug_images = np.array(aug_images, dtype=images.dtype)
 
     else:
         raise RuntimeError("Unknow image shape {}".format(images.shape))
@@ -192,13 +194,14 @@ def color(images: np.ndarray):
     """
     # image batches
     if images.ndim == 4:
-        aug_images = np.empty(shape=images.shape)
+        aug_images = np.empty(shape=images.shape, dtype=images.dtype)
         for i, image in enumerate(images):
             image_obj = Image.fromarray(image).convert('L').convert("RGB")
             aug_images[i] = np.array(image_obj, dtype=images.dtype)
 
     elif images.ndim == 3:
-        aug_images = Image.fromarray(images).convert('L')
+        aug_images = Image.fromarray(images).convert('L').convert("RGB")
+        aug_images = np.array(aug_images, dtype=images.dtype)
 
     else:
         raise RuntimeError("Unknow image shape {}".format(images.shape))
