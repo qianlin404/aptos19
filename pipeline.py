@@ -41,7 +41,8 @@ class KerasPipeline(object):
                  validation_filename: str,
                  image_dir: str,
                  load_fn: Callable,
-                 augment_fn: Callable,
+                 augment_policy: List,
+                 augment_config: Dict,
                  preprocess_fn: Callable,
                  image_size: Tuple,
                  batch_size: int,
@@ -81,7 +82,8 @@ class KerasPipeline(object):
         self.validation_filename = validation_filename
         self.image_dir = image_dir
         self.load_fn = load_fn
-        self.augment_fn = augment_fn
+        self.augment_policy = augment_policy
+        self.augment_config = augment_config
         self.preprocess_fn = preprocess_fn
         self.image_size = image_size
         self.batch_size = batch_size
@@ -116,9 +118,9 @@ class KerasPipeline(object):
                             training_samples=self.training_samples,
                             validation_samples=self.validation_samples)
         preprocess_config = dict(load_fn=self.load_fn.__name__,
-                                 augment_fn=self.augment_fn.__name__,
                                  preprocess_func=self.preprocess_fn.__name__,
-                                 image_size=self.image_size)
+                                 image_size=self.image_size,
+                                 augment_config=self.augment_config)
         optimizer_config = dict(name=self.optimizer.__name__, params=self.optimizer_params)
         regularizer_config = dict(name=self.regularizer.__name__, params=self.regularizer_params)
         train_config = dict(optimizer=optimizer_config, num_epochs=self.num_epochs, loss=self.loss.__name__,
