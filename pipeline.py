@@ -176,13 +176,13 @@ class KerasPipeline(object):
         """ Return input generator for trainning validation data """
         print("Loading trainning data...")
         train = preprocess.ImageGenerator(self.training_set, image_size=self.image_size, batch_size=self.batch_size,
-                                          preprocess_fn=self.preprocess_fn, augment_fn=self.augment_fn,
+                                          preprocess_fn=self.preprocess_fn, augment_policy=self.augment_policy,
                                           load_fn=self.load_fn)
         train.show_sample()
 
         print("Loading validation data...")
         val = preprocess.ImageGenerator(self.validation_set, image_size=self.image_size, batch_size=self.batch_size,
-                                        preprocess_fn=self.preprocess_fn, augment_fn=self.augment_fn,
+                                        preprocess_fn=self.preprocess_fn, augment_policy=self.augment_policy,
                                         load_fn=self.load_fn)
         val.show_sample()
         print("{t:<20}: {batch_size}".format(t="Batch size", batch_size=self.batch_size))
