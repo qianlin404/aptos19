@@ -147,7 +147,7 @@ class KerasPipeline(object):
                                                                      "weights.{epoch:02d}-{val_loss:.2f}.h5"),
                                                         monitor="val_loss", save_best_only=True, save_weights_only=True,
                                                         mode="min")
-        early_stop = tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=9, mode="min",
+        early_stop = tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=5, mode="min",
                                                       restore_best_weights=True)
         lr_decay = tf.keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=.5, patience=3, mode="min")
 

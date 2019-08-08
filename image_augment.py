@@ -278,8 +278,8 @@ def get_operation_pool():
         iaa.Sometimes(.7, iaa.Lambda(func_images=posterize_wrap_3), name="posterize_3_0.7"),
         iaa.Sometimes(.3, iaa.Lambda(func_images=posterize_wrap_6), name="posterize_6_0.3"),
         iaa.Sometimes(.7, iaa.Lambda(func_images=posterize_wrap_6), name="posterize_6_0.7"),
-        iaa.Sometimes(.3, iaa.Lambda(func_images=cutout_wrap, name="cutout_0.3")),
-        iaa.Sometimes(.7, iaa.Lambda(func_images=cutout_wrap, name="cutout_0.7"))
+        iaa.Sometimes(.3, iaa.Lambda(func_images=cutout_wrap), name="cutout_0.3"),
+        iaa.Sometimes(.7, iaa.Lambda(func_images=cutout_wrap), name="cutout_0.7")
     ]
 
 
