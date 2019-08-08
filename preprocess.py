@@ -27,8 +27,8 @@ def load_default(filenames: List[str], size=(299, 299)) -> np.ndarray:
         image_tensor
     """
 
-    res = [cv2.resize(_load_image(f), size) for f in filenames]
-    return res
+    res = [np.expand_dims(cv2.resize(_load_image(f), size), axis=0) for f in filenames]
+    return np.concatenate(res)
 
 
 def _load_image(filename: str) -> np.ndarray:
