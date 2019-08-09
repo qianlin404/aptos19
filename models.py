@@ -84,6 +84,7 @@ def get_efficientnet_b0(training: bool=True, model_ckpt: str=None):
         features = tf.keras.layers.BatchNormalization()(features)
         features = tf.keras.layers.ReLU()(features)
         features = tf.keras.layers.AveragePooling2D(pool_size=(7, 7))(features)
+        features = K.squeeze(features, axis=2)
         features = K.squeeze(features, axis=1)
 
     if training:
