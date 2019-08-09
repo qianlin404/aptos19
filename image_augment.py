@@ -220,7 +220,7 @@ class AugPolicy(object):
         self.operations = operations
         self.num_subpolicy = num_subpolicy
 
-    def generate_policy(self):
+    def generate_policy(self, policy_config=None):
         """
         generate policy
         Returns:
@@ -228,13 +228,21 @@ class AugPolicy(object):
             policy_config: Dict
         """
         policy = []
-        policy_config = []
 
-        for i in range(self.num_subpolicy):
-            index = np.random.randint(0, len(self.operations), 2)
-            subpolicy = [self.operations[int(i)] for i in index]
-            policy.append(subpolicy)
-            policy_config.append([p.name for p in subpolicy])
+        if policy_config:
+            config = policy_config["policy"]
+            for subpolicy_names in config:
+                subpolicy = []
+                for subpolicy_name in subpolicy_names:
+                    subpolicy += [p for p in self.operations if p.name == subpolicy_name]
+                policy.append(subpolicy)
+        else:
+            policy_config = []
+            for i in range(self.num_subpolicy):
+                index = np.random.randint(0, len(self.operations), 2)
+                subpolicy = [self.operations[int(i)] for i in index]
+                policy.append(subpolicy)
+                policy_config.append([p.name for p in subpolicy])
 
         return policy, dict(policy=policy_config)
 
@@ -263,7 +271,7 @@ def get_operation_pool():
     return [
         iaa.Fliplr(.5, name="fliplr_0.5"),
         iaa.Sometimes(.3, iaa.Lambda(func_images=equalize_wrap), name="equalize_0.3"),
-        iaa.Sometimes(.7), iaa.Lambda(func_images=equalize_wrap, name="euqalize_0.7"),
+        iaa.Sometimes(.7, iaa.Lambda(func_images=equalize_wrap, name="euqalize_0.7")),
         iaa.Sometimes(.3, iaa.Affine(rotate=(-30, 30)), name="rotate_30_0.3"),
         iaa.Sometimes(.7, iaa.Affine(rotate=(-30, 30)), name="rotate_30_0.7"),
         iaa.Sometimes(.3, iaa.Affine(shear=(-16, 16)), name="shear_16_0.3"),

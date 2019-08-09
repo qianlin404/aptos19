@@ -7,7 +7,9 @@
 # ========================================================
 
 import tensorflow as tf
+import tensorflow.keras.backend as K
 import numpy as np
+import efficientnet_builder
 
 
 def get_inception_resnet_v2():
@@ -39,3 +41,47 @@ def get_resnet_50():
 
     return tf.keras.Model(inputs, pred)
 
+
+def _get_efficientnet(images_tensor, model_name: str, training=True):
+    """
+    Get efficientnet
+    Args:
+        images_tensor: input tensor
+        model_name: name of model
+        training: bool if it is for training
+
+    Returns:
+        efficientnet feature extractor
+
+    """
+    with tf.variable_scope("Preprocess"):
+        images_tensor = tf.cast(images_tensor, dtype=tf.float32)
+        images_tensor -= tf.constant(efficientnet_builder.MEAN_RGB, shape=[1, 1, 3], dtype=images_tensor.dtype)
+        images_tensor /= tf.constant(efficientnet_builder.STDDEV_RGB, shape=[1, 1, 3], dtype=images_tensor.dtype)
+
+    features, _ = efficientnet_builder.build_model_base(images_tensor, model_name=model_name, training=training)
+
+    return features
+
+
+def get_efficientnet_b0(training: bool=True):
+    """ Build efficientnet_b0 and load pre-trained weights """
+    model_name = "efficientnet-b0"
+    model_param = efficientnet_builder.efficientnet_params(model_name)
+    image_size = model_param[2]
+
+    inputs = tf.keras.layers.Input(shape=(image_size, image_size, 3), dtype=tf.uint8)
+    features = _get_efficientnet(inputs, model_name=model_name, training=training)
+
+    with tf.variable_scope("head"):
+        features = tf.keras.layers.Conv2D(filters=1280, kernel_size=(1, 1), strides=(1, 1))(features)
+        features = tf.keras.layers.BatchNormalization()(features)
+        features = tf.keras.layers.ReLU()(features)
+        features = tf.keras.layers.AveragePooling2D(pool_size=(7, 7))(features)
+        features = K.squeeze(features, axis=1)
+
+    if training:
+        features = tf.keras.layers.Dropout(0.4)(features)
+    logits = tf.keras.layers.Dense(5, activation="softmax", name="scores")(features)
+
+    return tf.keras.Model(inputs, logits)
