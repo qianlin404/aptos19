@@ -199,7 +199,7 @@ class KerasPipeline(object):
     def _build_model(self):
         """ Build and compile model """
         print("{t:<20}: {model}".format(t="Model", model=self.model_generating_fn.__name__))
-        model = self.model_generating_fn(training=True)
+        model = self.model_generating_fn(training=True, model_ckpt=self.model_ckpt)
 
         print("{t:<20}: {reg}".format(t="Regularizer", reg=self.regularizer.__name__))
         print(json.dumps(self.regularizer_params))
@@ -212,11 +212,8 @@ class KerasPipeline(object):
         print("{t:<20}: {loss}".format(t="Loss Function", loss=self.loss.__name__))
         model.compile(optimizer, loss=self.loss, metrics=self.eval_metrics)
 
-        if self.model_ckpt:
-            print("{t:<20}: {filename}".format(t="Model checkpoint", filename=self.model_ckpt))
-            sess = K.get_session()
-            saver = tf.train.Saver()
-            saver.restore(sess, self.model_ckpt)
+        print("{t:<20}: {filename}".format(t="Model checkpoint", filename=self.model_ckpt))
+
 
         return model
 
