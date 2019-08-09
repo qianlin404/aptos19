@@ -13,6 +13,7 @@ import pandas as pd
 import json
 import preprocess
 import tensorflow as tf
+import tensorflow.keras.backend as K
 
 from pathlib import Path
 from functools import partial
@@ -55,7 +56,8 @@ class KerasPipeline(object):
                  regularizer_params: Dict,
                  eval_metrics: List[Callable],
                  cv_fn: Callable,
-                 name: str):
+                 name: str,
+                 model_ckpt: str=None):
         """
         Initializer
         Args:
@@ -77,6 +79,7 @@ class KerasPipeline(object):
             eval_metrics: evaluation metrics
             cv_fn: Cross validation function
             name: name of this run
+            model_ckpt: checkpoint prefix
         """
         self.training_filename = training_filename
         self.validation_filename = validation_filename
@@ -97,6 +100,7 @@ class KerasPipeline(object):
         self.eval_metrics = eval_metrics
         self.cv_fn = cv_fn
         self.name = name
+        self.model_ckpt = model_ckpt
 
         # Placeholders
         self.training_set = None
@@ -110,6 +114,8 @@ class KerasPipeline(object):
         self.eval = {}
         self.created_time = int(time.time())
         os.makedirs(self._get_save_dir(), exist_ok=True)
+
+        self.ckpt_path = os.path.join(self._get_save_dir(), "weights.best.h5")
 
     def write_config(self):
         input_config = dict(training_filename=self.training_filename,
@@ -126,9 +132,10 @@ class KerasPipeline(object):
         train_config = dict(optimizer=optimizer_config, num_epochs=self.num_epochs, loss=self.loss.__name__,
                             regularizer=regularizer_config)
         evaluation = self.eval
+        model_config = dict(name=self.model_generating_fn.__name__, checkpoint=self.model_ckpt)
 
         config = dict(input_data=input_config, preprocess=preprocess_config, train_config=train_config,
-                      evaluation=evaluation)
+                      evaluation=evaluation, model=model_config)
 
         save_dir = self._get_save_dir()
         save_filename = os.path.join(save_dir, "config.json")
@@ -144,7 +151,7 @@ class KerasPipeline(object):
     def _get_callback(self):
         """ Get callbacks for the model """
         checkpoint = tf.keras.callbacks.ModelCheckpoint(os.path.join(self._get_save_dir(),
-                                                                     "weights.{epoch:02d}-{val_loss:.2f}.h5"),
+                                                                     self.ckpt_path),
                                                         monitor="val_loss", save_best_only=True, save_weights_only=True,
                                                         mode="min")
         early_stop = tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=5, mode="min",
@@ -193,7 +200,7 @@ class KerasPipeline(object):
     def _build_model(self):
         """ Build and compile model """
         print("{t:<20}: {model}".format(t="Model", model=self.model_generating_fn.__name__))
-        model = self.model_generating_fn()
+        model = self.model_generating_fn(training=True)
 
         print("{t:<20}: {reg}".format(t="Regularizer", reg=self.regularizer.__name__))
         print(json.dumps(self.regularizer_params))
@@ -206,6 +213,12 @@ class KerasPipeline(object):
         print("{t:<20}: {loss}".format(t="Loss Function", loss=self.loss.__name__))
         model.compile(optimizer, loss=self.loss, metrics=self.eval_metrics)
 
+        if self.model_ckpt:
+            print("{t:<20}: {filename}".format(t="Model checkpoint", filename=self.model_ckpt))
+            sess = K.get_session()
+            saver = tf.train.Saver()
+            saver.restore(sess, self.model_ckpt)
+
         return model
 
     def _cv(self):
@@ -213,9 +226,12 @@ class KerasPipeline(object):
         y_true = []
         y_pred = []
 
+        eval_model = self.model_generating_fn(training=False)
+        eval_model.load_weights(self.ckpt_path, by_name=True)
+
         for i in range(len(self.val_generator)):
             image, label = self.val_generator[i]
-            pred = self.model.predict(image)
+            pred = eval_model.predict(image)
             pred = np.argmax(pred, axis=1).ravel()
             y_true.append(label)
             y_pred.append(pred)
@@ -238,7 +254,6 @@ class KerasPipeline(object):
                                  epochs=self.num_epochs, callbacks=self._get_callback())
 
         metric_value = self._cv()
-
         self.eval[self.cv_fn.__name__] = metric_value
 
         self.write_config()

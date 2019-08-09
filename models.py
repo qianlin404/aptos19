@@ -12,7 +12,7 @@ import numpy as np
 import efficientnet_builder
 
 
-def get_inception_resnet_v2():
+def get_inception_resnet_v2(training: bool=True):
     """
     Build pre-trained keras Inception_Resnet_V2
     Returns: keras.Model
@@ -27,7 +27,7 @@ def get_inception_resnet_v2():
     return tf.keras.Model(inputs, pred)
 
 
-def get_resnet_50():
+def get_resnet_50(training: bool=True):
     """
     Build pre-trained keras resnet_50
     Returns: keras.Model
