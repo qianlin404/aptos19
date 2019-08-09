@@ -226,6 +226,7 @@ class KerasPipeline(object):
         y_true = []
         y_pred = []
 
+        tf.reset_default_graph()
         eval_model = self.model_generating_fn(training=False)
         eval_model.load_weights(self.ckpt_path, by_name=True)
 
