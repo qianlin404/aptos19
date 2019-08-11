@@ -132,7 +132,7 @@ class KerasPipeline(object):
         train_config = dict(optimizer=optimizer_config, num_epochs=self.num_epochs, loss=self.loss.__name__,
                             regularizer=regularizer_config)
         evaluation = self.eval
-        model_config = dict(name=self.model_generating_fn.__name__, checkpoint=self.model_ckpt)
+        model_config = dict(name=self.name, checkpoint=self.model_ckpt)
 
         config = dict(input_data=input_config, preprocess=preprocess_config, train_config=train_config,
                       evaluation=evaluation, model=model_config)
