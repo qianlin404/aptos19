@@ -9,21 +9,22 @@
 import tensorflow as tf
 
 
-def quadratic_kappa(y_true, y_pred):
-    """ Quadratic kappa """
-    pred = tf.math.argmax(y_pred, axis=1)
+def weighted_sparse_categorical_crossentropy(y_true, y_pred):
+    """
+    weighted version of sparse categorical crossentropy loss
+    Args:
+        y_true: ground true labels, in shape [batch_size]
+        y_pred: prediction logits, in shape [batch_size, num_classes]
 
-    confusion = tf.confusion_matrix(y_true, pred, dtype=tf.float32)
-    n_classes = tf.shape(confusion)[0]
-    sum0 = tf.reduce_sum(confusion, axis=0)
-    sum1 = tf.reduce_sum(confusion, axis=1)
+    Returns:
+        loss: tensor
 
-    expected = tf.reshape(sum0, [n_classes, 1]) * tf.reshape(sum1, [1, n_classes]) / tf.reduce_sum(sum0)
+    """
+    with tf.variable_scope("weighted_categorical_crossentropy"):
+        pred = tf.argmax(y_pred, axis=1, name="prediction")
+        labels = tf.cast(y_true, dtype=tf.int64)
 
-    w_mat = tf.zeros([n_classes, n_classes], dtype=tf.float32)
-    w_mat += tf.range(tf.cast(n_classes, dtype=tf.float32), dtype=tf.float32)
-    w_mat = (w_mat - tf.transpose(w_mat)) ** 2
+        pred_distance = tf.abs(labels-pred, name="distance")
+        weights = 2**pred_distance
 
-    k = tf.reduce_sum(w_mat * confusion) / tf.reduce_sum(w_mat * expected)
-
-    return 1 - k
+        return tf.losses.sparse_softmax_cross_entropy(labels, y_pred, weights=weights)

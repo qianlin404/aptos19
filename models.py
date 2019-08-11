@@ -78,7 +78,7 @@ def get_efficientnet(model_name, training: bool=True, model_ckpt: str=None):
     _, global_params = efficientnet_builder.get_model_params(model_name, {})
     image_size = model_param[2]
 
-    inputs = tf.keras.layers.Input(shape=(image_size, image_size, 3), dtype=tf.uint8)
+    inputs = tf.keras.layers.Input(shape=(image_size, image_size, 3), dtype=tf.uint8, name="image_tensor")
     features = _get_efficientnet(inputs, model_name=model_name, training=training, model_ckpt=model_ckpt)
 
     with tf.variable_scope("head"):
@@ -89,7 +89,7 @@ def get_efficientnet(model_name, training: bool=True, model_ckpt: str=None):
         features = tf.keras.layers.GlobalAveragePooling2D(data_format="channels_last")(features)
 
     if training:
-        features = tf.keras.layers.Dropout(0.4)(features)
+        features = tf.keras.layers.Dropout(model_param[3])(features)
     logits = tf.keras.layers.Dense(5, activation="softmax", name="scores")(features)
 
     return tf.keras.Model(inputs, logits)

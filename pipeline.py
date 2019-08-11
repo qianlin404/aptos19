@@ -13,7 +13,7 @@ import pandas as pd
 import json
 import preprocess
 import tensorflow as tf
-import tensorflow.keras.backend as K
+import sklearn
 
 from pathlib import Path
 from functools import partial
@@ -237,9 +237,14 @@ class KerasPipeline(object):
         y_pred = np.concatenate(y_pred)
 
         score = self.cv_fn(y_true, y_pred)
+        confusion_matrix = sklearn.metrics.confusion_matrix(y_true, y_pred)
 
+        result = {
+            self.cv_fn.__name: score,
+            "confusion_matrix": confusion_matrix
+        }
         print("{metric_name}: {score:.2f}".format(metric_name=self.cv_fn.__name__, score=score))
-        return score
+        return result
 
     def train(self):
         self._read_input()
@@ -250,8 +255,8 @@ class KerasPipeline(object):
                                  validation_data=self.val_generator, validation_steps=len(self.val_generator),
                                  epochs=self.num_epochs, callbacks=self._get_callback())
 
-        metric_value = self._cv()
-        self.eval[self.cv_fn.__name__] = metric_value
+        cv_result = self._cv()
+        self.eval = cv_result
 
         self.write_config()
 
