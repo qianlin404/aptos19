@@ -198,7 +198,7 @@ class KerasPipeline(object):
 
     def _build_model(self):
         """ Build and compile model """
-        print("{t:<20}: {model}".format(t="Model", model=self.model_generating_fn.__name__))
+        print("{t:<20}: {model}".format(t="Model", model=self.name))
         model = self.model_generating_fn(training=True, model_ckpt=self.model_ckpt)
 
         print("{t:<20}: {reg}".format(t="Regularizer", reg=self.regularizer.__name__))
