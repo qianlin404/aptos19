@@ -240,7 +240,7 @@ class KerasPipeline(object):
         confusion_matrix = sklearn.metrics.confusion_matrix(y_true, y_pred)
 
         result = {
-            self.cv_fn.__name: score,
+            self.cv_fn.__name__: score,
             "confusion_matrix": confusion_matrix
         }
         print("{metric_name}: {score:.2f}".format(metric_name=self.cv_fn.__name__, score=score))
