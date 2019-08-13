@@ -241,7 +241,7 @@ class KerasPipeline(object):
 
         result = {
             self.cv_fn.__name__: score,
-            "confusion_matrix": confusion_matrix
+            "confusion_matrix": confusion_matrix.tolist()
         }
         print("{metric_name}: {score:.2f}".format(metric_name=self.cv_fn.__name__, score=score))
         return result
