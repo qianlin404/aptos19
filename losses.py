@@ -25,6 +25,6 @@ def weighted_sparse_categorical_crossentropy(y_true, y_pred):
         labels = tf.cast(y_true, dtype=tf.int64)
 
         pred_distance = tf.abs(labels-pred, name="distance")
-        weights = tf.cast(2**pred_distance, dtype=tf.float32)
+        weights = tf.log(pred_distance+tf.exp(1), dtype=tf.float32)
 
         return tf.keras.losses.sparse_categorical_crossentropy(y_true, y_pred) * weights
