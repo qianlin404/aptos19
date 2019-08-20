@@ -72,7 +72,7 @@ def _get_efficientnet(images_tensor, model_name: str, training=True, model_ckpt:
     return features
 
 
-def get_efficientnet(model_name, training: bool=True, model_ckpt: str=None):
+def get_efficientnet(model_name, training: bool=True, model_ckpt: str=None, regression=False):
     """ Build efficientnet_b0 and load pre-trained weights """
     model_param = efficientnet_builder.efficientnet_params(model_name)
     _, global_params = efficientnet_builder.get_model_params(model_name, {})
@@ -90,6 +90,10 @@ def get_efficientnet(model_name, training: bool=True, model_ckpt: str=None):
 
     if training:
         features = tf.keras.layers.Dropout(model_param[3])(features)
-    logits = tf.keras.layers.Dense(5, activation="softmax", name="scores")(features)
+
+    if regression:
+        logits = tf.keras.layers.Dense(1, names="scores")(features)
+    else:
+        logits = tf.keras.layers.Dense(5, activation="softmax", name="scores")(features)
 
     return tf.keras.Model(inputs, logits)

@@ -15,9 +15,94 @@ import preprocess
 import tensorflow as tf
 import sklearn
 
+from scipy import optimize
 from pathlib import Path
 from functools import partial
 from typing import Callable, Tuple, Dict, List
+
+
+class Postprocessor(object):
+    """ convert model output to predicted labels """
+    def get_predition(self, output_tensor: np.ndarray):
+        """
+        Model output to prediction labels
+        Args:
+            output_tensor: raw output from model, can be probability or logits
+
+        Returns:
+            predicted_labels: labels, int, in shape [batch_size,]
+
+        """
+        raise NotImplementedError
+
+
+class ClassificationPostprocessor(Postprocessor):
+    """ Postprocessor for classification """
+    def get_predition(self, output_tensor: np.ndarray):
+        """ Convert probability to predicted labels"""
+        return np.argmax(output_tensor, axis=1).ravel()
+
+
+class RegressionPostprocessor(Postprocessor):
+    """ Postprocessor for regression """
+    def __init__(self, threshold=None):
+        if threshold:
+            self.threshold = np.array(threshold, dtype=np.float32)
+        else:
+            self.threshold = np.array([0.5, 1.5, 2.5, 3.5], dtype=np.float32)
+        self.optimizer = None
+
+    @staticmethod
+    def _get_one_prediction(threshold, value):
+        """ get prediction using threshold """
+        if value < threshold[0]:
+            return 0
+        elif threshold[0] <= value < threshold[1]:
+            return 1
+        elif threshold[1] <= value < threshold[2]:
+            return 2
+        elif threshold[2] <= value < threshold[3]:
+            return 3
+        else:
+            return 4
+
+    def get_predition(self, output_tensor: np.ndarray):
+        """ Convert regression value to predicted labels """
+        predicted_labels = np.zeros(shape=(output_tensor.shape[0]), dtype=np.int32)
+
+        for i, pred in enumerate(output_tensor):
+            predicted_labels[i] = self._get_one_prediction(self.threshold, pred)
+
+        return predicted_labels
+
+    def fit(self, predicted_logits: np.ndarray, labels: np.ndarray):
+        """
+        Find threshold the optimize quadratic weighted kappa scores
+        Args:
+            predicted_logits: logits from model
+            labels: ground true labels
+
+        Returns:
+            None, update self.threshold
+        """
+        origin_prediction = self.get_predition(predicted_logits)
+        origin_kappa = sklearn.metrics.cohen_kappa_score(labels, origin_prediction, weights="quadratic")
+        print("Origin QWK is: %.4f" % origin_kappa)
+
+        def _kappa_loss(threshold):
+            """ function use for optimization """
+            predicted_labels = np.zeros(shape=(predicted_logits.shape[0]), dtype=np.int32)
+            for i, pred in enumerate(predicted_logits):
+                predicted_labels[i] = self._get_one_prediction(threshold, pred)
+
+            return sklearn.metrics.cohen_kappa_score(labels, predicted_logits, weights="quadratic")
+
+        self.optimizer = optimize.minimize(_kappa_loss, self.threshold, method='nelder-mead')
+        self.threshold = self.optimizer['x']
+
+        optimized_prediction = self.get_predition(predicted_logits)
+        optimized_kappa = sklearn.metrics.cohen_kappa_score(labels, optimized_prediction)
+        print("Optimized QWK is: %.4f" % optimized_kappa)
 
 
 def get_image_paths(id_code, image_dir):
@@ -45,6 +130,7 @@ class KerasPipeline(object):
                  augment_policy: List,
                  augment_config: Dict,
                  preprocess_fn: Callable,
+                 postprocessor: Postprocessor,
                  image_size: Tuple,
                  batch_size: int,
                  model_generating_fn: Callable,
@@ -67,6 +153,7 @@ class KerasPipeline(object):
             load_fn: function to load image
             augment_fn: function to perform data augmentation
             preprocess_fn: preprocess function
+            postprocessor: Postprocessor object
             image_size: image size in (H, W) format
             batch_size: batch size for training
             model_generating_fn: function to generate the model
@@ -88,6 +175,7 @@ class KerasPipeline(object):
         self.augment_policy = augment_policy
         self.augment_config = augment_config
         self.preprocess_fn = preprocess_fn
+        self.postprocessor = postprocessor
         self.image_size = image_size
         self.batch_size = batch_size
         self.model_generating_fn = model_generating_fn
@@ -229,7 +317,7 @@ class KerasPipeline(object):
         for i in range(len(self.val_generator)):
             image, label = self.val_generator[i]
             pred = eval_model.predict(image)
-            pred = np.argmax(pred, axis=1).ravel()
+            pred = self.postprocessor.get_predition(pred)
             y_true.append(label)
             y_pred.append(pred)
 
