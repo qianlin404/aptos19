@@ -95,13 +95,13 @@ class RegressionPostprocessor(Postprocessor):
             for i, pred in enumerate(predicted_logits):
                 predicted_labels[i] = self._get_one_prediction(threshold, pred)
 
-            return sklearn.metrics.cohen_kappa_score(labels, predicted_labels, weights="quadratic")
+            return -sklearn.metrics.cohen_kappa_score(labels, predicted_labels, weights="quadratic")
 
         self.optimizer = optimize.minimize(_kappa_loss, self.threshold, method='nelder-mead')
         self.threshold = self.optimizer['x']
 
         optimized_prediction = self.get_predition(predicted_logits)
-        optimized_kappa = sklearn.metrics.cohen_kappa_score(labels, optimized_prediction)
+        optimized_kappa = sklearn.metrics.cohen_kappa_score(labels, optimized_prediction, weights="quadratic")
         print("Optimized QWK is: %.4f" % optimized_kappa)
 
 
