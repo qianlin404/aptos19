@@ -142,11 +142,15 @@ class ImageGenerator(tf.keras.utils.Sequence):
         self._augment_policy = augment_policy
 
         np.random.seed(self._seed)
-        indexes = np.array([i for i in range(self.__len__() * self._batch_size)])
-        self._batch_index = np.random.permutation(indexes).reshape((self.__len__(), self._batch_size))
+        indexes = np.array([i for i in range(self._image_data.shape[0])])
+        indexes = np.random.permutation(indexes)
+
+        self._batch_index = []
+        for i in range(self.__len__()):
+            self._batch_index.append(indexes[i*self.batch_size:(i+1)*self.batch_size])
 
     def __len__(self):
-        return self._image_data.shape[0] // self._batch_size
+        return np.ceil(self._image_data.shape[0] / self._batch_size)
 
     def __getitem__(self, item):
         """ Return a generator that generate (images, label) tuple """

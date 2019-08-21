@@ -243,7 +243,8 @@ class KerasPipeline(object):
                                                         mode="min")
         early_stop = tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=5, mode="min",
                                                       restore_best_weights=True)
-        lr_decay = tf.keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=.5, patience=3, mode="min")
+        lr_decay = tf.keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=.5, patience=3, mode="min",
+                                                        verbose=True)
 
         logdir = "tensorboard/" + self.name + "_" + str(self.created_time)
         tensorboard = tf.keras.callbacks.TensorBoard(log_dir=logdir, write_graph=False, update_freq="epoch")
@@ -302,7 +303,6 @@ class KerasPipeline(object):
 
         print("{t:<20}: {filename}".format(t="Model checkpoint", filename=self.model_ckpt))
 
-
         return model
 
     def _cv(self):
@@ -333,6 +333,23 @@ class KerasPipeline(object):
         }
         print("{metric_name}: {score:.2f}".format(metric_name=self.cv_fn.__name__, score=score))
         return result
+
+    def _quadratic_weighted_kappa(self):
+        """ compute quadratic weighted kappa on validation set """
+        y_true = []
+        y_pred = []
+
+        for i in range(len(self.val_generator)):
+            image, label = self.val_generator[i]
+            pred = self.model.predict(image)
+            pred = self.postprocessor.get_predition(pred)
+            y_true.append(label)
+            y_pred.append(pred)
+
+        y_true = np.concatenate(y_true)
+        y_pred = np.concatenate(y_pred)
+
+        return sklearn.metrics.cohen_kappa_score(y_true, y_pred)
 
     def train(self):
         self._read_input()
