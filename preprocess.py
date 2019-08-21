@@ -150,7 +150,7 @@ class ImageGenerator(tf.keras.utils.Sequence):
             self._batch_index.append(indexes[i*self.batch_size:(i+1)*self.batch_size])
 
     def __len__(self):
-        return np.ceil(self._image_data.shape[0] / self._batch_size)
+        return int(np.ceil(self._image_data.shape[0] / self._batch_size))
 
     def __getitem__(self, item):
         """ Return a generator that generate (images, label) tuple """
