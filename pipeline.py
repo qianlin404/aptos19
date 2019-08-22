@@ -143,6 +143,7 @@ class KerasPipeline(object):
                  eval_metrics: List[Callable],
                  cv_fn: Callable,
                  name: str,
+                 record_name: str,
                  model_ckpt: str=None):
         """
         Initializer
@@ -166,6 +167,7 @@ class KerasPipeline(object):
             eval_metrics: evaluation metrics
             cv_fn: Cross validation function
             name: name of this run
+            record_name: name of this running
             model_ckpt: checkpoint prefix
         """
         self.training_filename = training_filename
@@ -200,7 +202,7 @@ class KerasPipeline(object):
         self.val_generator = None
 
         self.eval = {}
-        self.created_time = int(time.time())
+        self.record_name = record_name
         os.makedirs(self._get_save_dir(), exist_ok=True)
 
         self.ckpt_path = os.path.join(self._get_save_dir(), "weights.best.h5")
@@ -233,8 +235,8 @@ class KerasPipeline(object):
             f.write(json.dumps(config))
 
     def _get_save_dir(self):
-        folder_name = str(self.created_time)
-        return str(Path("models/") / folder_name)
+        folder_name = os.path.join("models", self.record_name)
+        return folder_name
 
     def _get_callback(self):
         """ Get callbacks for the model """
@@ -246,7 +248,7 @@ class KerasPipeline(object):
         lr_decay = tf.keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=.5, patience=3, mode="min",
                                                         verbose=True)
 
-        logdir = "tensorboard/" + self.name + "_" + str(self.created_time)
+        logdir = "tensorboard/" + self.record_name
         tensorboard = tf.keras.callbacks.TensorBoard(log_dir=logdir, write_graph=False, update_freq="epoch")
 
         return [checkpoint, early_stop, lr_decay, tensorboard]
