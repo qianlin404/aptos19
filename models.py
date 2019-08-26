@@ -72,6 +72,18 @@ def _get_efficientnet(images_tensor, model_name: str, training=True, model_ckpt:
     return features
 
 
+def _clip_output(logit):
+    """
+    Clip output to [0, 4]
+    Args:
+        logit: output logit
+
+    Returns:
+        cliped_logit
+    """
+    return tf.clip_by_value(logit, 0.0, 4.0, name="clip_by_value")
+
+
 def get_efficientnet(model_name, training: bool=True, model_ckpt: str=None, regression=False):
     """ Build efficientnet_b0 and load pre-trained weights """
     model_param = efficientnet_builder.efficientnet_params(model_name)
@@ -93,7 +105,7 @@ def get_efficientnet(model_name, training: bool=True, model_ckpt: str=None, regr
 
     if regression:
         logits = tf.keras.layers.Dense(1)(features)
-        logits = tf.keras.backend.clip(logits, min_value=0, max_value=4)
+        logits = _clip_output(logits)
     else:
         logits = tf.keras.layers.Dense(5, activation="softmax", name="scores")(features)
 
