@@ -105,18 +105,18 @@ class RegressionPostprocessor(Postprocessor):
         print("Optimized QWK is: %.4f" % optimized_kappa)
 
 
-def get_image_paths(id_code, image_dir):
+def get_image_paths(id_code, image_dir, suffix=".png"):
     """
     Get image path by concatenating image directory with image code id and suffix
     Args:
         image_dir: image directory
         id_code: image code ID
+        suffix: suffix of file
 
     Returns:
         image_path: str
 
     """
-    suffix = ".png"
     return os.path.join(image_dir, id_code + suffix)
 
 
@@ -144,7 +144,8 @@ class KerasPipeline(object):
                  cv_fn: Callable,
                  name: str,
                  record_name: str,
-                 model_ckpt: str=None):
+                 model_ckpt: str=None,
+                 image_suffix: str=".png"):
         """
         Initializer
         Args:
@@ -169,6 +170,7 @@ class KerasPipeline(object):
             name: name of this run
             record_name: name of this running
             model_ckpt: checkpoint prefix
+            image_suffix: suffix of image files
         """
         self.training_filename = training_filename
         self.validation_filename = validation_filename
@@ -191,6 +193,7 @@ class KerasPipeline(object):
         self.cv_fn = cv_fn
         self.name = name
         self.model_ckpt = model_ckpt
+        self.image_suffix = image_suffix
 
         # Placeholders
         self.training_set = None
@@ -260,7 +263,7 @@ class KerasPipeline(object):
         print("{t:<20}: {training_filename}".format(t="Training set", training_filename=self.training_filename))
         print("{t:<20}: {training_filename}".format(t="valiation set", training_filename=self.validation_filename))
 
-        get_path_fn = partial(get_image_paths, image_dir=self.image_dir)
+        get_path_fn = partial(get_image_paths, image_dir=self.image_dir, suffix=self.image_suffix)
         self.training_set["path"] = self.training_set["id_code"].apply(get_path_fn)
         self.validation_set["path"] = self.validation_set["id_code"].apply(get_path_fn)
 
