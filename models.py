@@ -105,7 +105,6 @@ def get_efficientnet(model_name, training: bool=True, model_ckpt: str=None, regr
 
     if regression:
         logits = tf.keras.layers.Dense(1)(features)
-        logits = tf.keras.layers.Lambda(_clip_output, name="clip_by_value")(logits)
     else:
         logits = tf.keras.layers.Dense(5, activation="softmax", name="scores")(features)
 
