@@ -28,3 +28,19 @@ def weighted_sparse_categorical_crossentropy(y_true, y_pred):
         weights = tf.log(tf.cast(pred_distance, tf.float32)+tf.exp(1.0))
 
         return tf.keras.losses.sparse_categorical_crossentropy(y_true, y_pred) * weights
+
+
+def clip_meam_square_error(y_true, y_pred):
+    """
+    Clip the logit and compute MSE
+    Args:
+        y_true: ground true labels, in shape [batch_size]
+        y_pred: logit, in shape [batch_size, 1]
+
+    Returns:
+        loss: tensor
+    """
+    with tf.variable_scope("clip_mean_squared_error"):
+        pred = tf.clip_by_value(y_pred, clip_value_min=-0.5, clip_value_max=4.5)
+
+        return tf.keras.losses.mean_squared_error(y_true=y_true, y_pred=pred)
