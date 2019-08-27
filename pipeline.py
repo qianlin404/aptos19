@@ -251,7 +251,7 @@ class KerasPipeline(object):
         checkpoint = tf.keras.callbacks.ModelCheckpoint(self.ckpt_path,
                                                         monitor="val_loss", save_best_only=True, save_weights_only=True,
                                                         mode="min")
-        early_stop = tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=5, mode="min",
+        early_stop = tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=8, mode="min",
                                                       restore_best_weights=True, verbose=True)
         lr_decay = tf.keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=.5, patience=3, mode="min",
                                                         verbose=True)
