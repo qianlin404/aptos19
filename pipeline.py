@@ -125,7 +125,7 @@ class KerasPipeline(object):
     def __init__(self,
                  training_filename: str,
                  validation_filename: str,
-                 image_dir: str,
+                 train_image_dir: str,
                  load_fn: Callable,
                  augment_policy: List,
                  augment_config: Dict,
@@ -144,14 +144,16 @@ class KerasPipeline(object):
                  cv_fn: Callable,
                  name: str,
                  record_name: str,
+                 val_image_dir=None,
                  model_ckpt: str=None,
-                 image_suffix: str=".png"):
+                 train_image_suffix: str=".png",
+                 val_image_suffix: str=".png"):
         """
         Initializer
         Args:
             training_filename: training set file path
             validation_filename: validation set file path
-            image_dir: image directory
+            train_image_dir: image directory
             load_fn: function to load image
             augment_fn: function to perform data augmentation
             preprocess_fn: preprocess function
@@ -169,12 +171,14 @@ class KerasPipeline(object):
             cv_fn: Cross validation function
             name: name of this run
             record_name: name of this running
+            val_image_dir: validation set image directory
             model_ckpt: checkpoint prefix
-            image_suffix: suffix of image files
+            train_image_suffix: suffix of image files
         """
         self.training_filename = training_filename
         self.validation_filename = validation_filename
-        self.image_dir = image_dir
+        self.train_image_dir = train_image_dir
+        self.val_image_dir = val_image_dir if val_image_dir else train_image_dir
         self.load_fn = load_fn
         self.augment_policy = augment_policy
         self.augment_config = augment_config
@@ -193,7 +197,8 @@ class KerasPipeline(object):
         self.cv_fn = cv_fn
         self.name = name
         self.model_ckpt = model_ckpt
-        self.image_suffix = image_suffix
+        self.train_image_suffix = train_image_suffix
+        self.val_image_suffix = val_image_suffix
 
         # Placeholders
         self.training_set = None
@@ -213,7 +218,7 @@ class KerasPipeline(object):
     def write_config(self):
         input_config = dict(training_filename=self.training_filename,
                             validation_filename=self.validation_filename,
-                            image_dir=self.image_dir,
+                            image_dir=self.train_image_dir,
                             training_samples=self.training_samples,
                             validation_samples=self.validation_samples)
         preprocess_config = dict(load_fn=self.load_fn.__name__,
@@ -263,9 +268,10 @@ class KerasPipeline(object):
         print("{t:<20}: {training_filename}".format(t="Training set", training_filename=self.training_filename))
         print("{t:<20}: {training_filename}".format(t="valiation set", training_filename=self.validation_filename))
 
-        get_path_fn = partial(get_image_paths, image_dir=self.image_dir, suffix=self.image_suffix)
-        self.training_set["path"] = self.training_set["id_code"].apply(get_path_fn)
-        self.validation_set["path"] = self.validation_set["id_code"].apply(get_path_fn)
+        get_train_path_fn = partial(get_image_paths, image_dir=self.train_image_dir, suffix=self.train_image_suffix)
+        get_val_path_fn = partial(get_image_paths, image_dir=self.val_image_dir, suffix=self.val_image_suffix)
+        self.training_set["path"] = self.training_set["id_code"].apply(get_train_path_fn)
+        self.validation_set["path"] = self.validation_set["id_code"].apply(get_val_path_fn)
 
         self.training_samples = self.training_set.shape[0]
         self.validation_samples = self.validation_set.shape[0]
