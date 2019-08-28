@@ -149,7 +149,7 @@ class KerasPipeline(object):
                  model_ckpt: str=None,
                  train_image_suffix: str=".png",
                  val_image_suffix: str=".png",
-                 fine_turning_layers: int=None):
+                 fine_tuning_layers: int=None):
         """
         Initializer
         Args:
@@ -177,6 +177,7 @@ class KerasPipeline(object):
             val_image_dir: validation set image directory
             model_ckpt: checkpoint prefix
             train_image_suffix: suffix of image files
+            fine_tuning_layers: last number of fine tuning layers
         """
         self.training_filename = training_filename
         self.validation_filename = validation_filename
@@ -203,7 +204,7 @@ class KerasPipeline(object):
         self.model_ckpt = model_ckpt
         self.train_image_suffix = train_image_suffix
         self.val_image_suffix = val_image_suffix
-        self.fine_tuning_layers = fine_turning_layers
+        self.fine_tuning_layers = fine_tuning_layers
 
         # Placeholders
         self.training_set = None
