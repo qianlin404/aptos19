@@ -307,7 +307,7 @@ class KerasPipeline(object):
         print("{t:<20}: {model}".format(t="Model", model=self.name))
         model = self.model_generating_fn(training=True, model_ckpt=self.model_ckpt)
         if self.model_weights_filename:
-            print("{t:<20}: {filename}".format(t="Model weights", filename=self.name))
+            print("{t:<20}: {filename}".format(t="Model weights", filename=self.model_weights_filename))
             model.load_weights(self.model_weights_filename, by_name=True)
 
         if self.fine_tuning_layers:
@@ -337,7 +337,41 @@ class KerasPipeline(object):
 
         tf.reset_default_graph()
         eval_model = self.model_generating_fn(training=False)
+        if self.fine_tuning_layers:
+            for layer in eval_model.layers[:-self.fine_tuning_layers]:
+                layer.trainable = False
+
         eval_model.load_weights(self.ckpt_path, by_name=True)
+
+        for i in range(len(self.val_generator)):
+            image, label = self.val_generator[i]
+            pred = eval_model.predict(image)
+            pred = self.postprocessor.get_predition(pred)
+            y_true.append(label)
+            y_pred.append(pred)
+
+        y_true = np.concatenate(y_true)
+        y_pred = np.concatenate(y_pred)
+
+        score = self.cv_fn(y_true, y_pred)
+        confusion_matrix = sklearn.metrics.confusion_matrix(y_true, y_pred)
+
+        result = {
+            self.cv_fn.__name__: score,
+            "confusion_matrix": confusion_matrix.tolist()
+        }
+        print("{metric_name}: {score:.2f}".format(metric_name=self.cv_fn.__name__, score=score))
+        return result
+
+    def _cv2(self):
+        """ Cross validation """
+        y_true = []
+        y_pred = []
+
+        tf.reset_default_graph()
+        eval_model = self.model_generating_fn(training=False)
+
+        eval_model.load_weights(os.path.join(self._get_save_dir(), "final.h5"), by_name=True)
 
         for i in range(len(self.val_generator)):
             image, label = self.val_generator[i]
@@ -385,7 +419,14 @@ class KerasPipeline(object):
                                  validation_data=self.val_generator, validation_steps=len(self.val_generator),
                                  epochs=self.num_epochs, callbacks=self._get_callback())
 
+        if self.fine_tuning_layers:
+            for layer in self.model.layers[:-self.fine_tuning_layers]:
+                layer.trainable = True
+
+        self.model.save_weights(os.path.join(self._get_save_dir(), "final.h5"))
+
         cv_result = self._cv()
+        self._cv2()
         self.eval = cv_result
 
         self.write_config()
