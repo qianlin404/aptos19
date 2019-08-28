@@ -144,10 +144,12 @@ class KerasPipeline(object):
                  cv_fn: Callable,
                  name: str,
                  record_name: str,
+                 model_weights_filename=None,
                  val_image_dir=None,
                  model_ckpt: str=None,
                  train_image_suffix: str=".png",
-                 val_image_suffix: str=".png"):
+                 val_image_suffix: str=".png",
+                 fine_turning_layers: int=None):
         """
         Initializer
         Args:
@@ -171,6 +173,7 @@ class KerasPipeline(object):
             cv_fn: Cross validation function
             name: name of this run
             record_name: name of this running
+            model_weights_filename: filename of model weights, default to none
             val_image_dir: validation set image directory
             model_ckpt: checkpoint prefix
             train_image_suffix: suffix of image files
@@ -196,9 +199,11 @@ class KerasPipeline(object):
         self.eval_metrics = eval_metrics
         self.cv_fn = cv_fn
         self.name = name
+        self.model_weights_filename = model_weights_filename
         self.model_ckpt = model_ckpt
         self.train_image_suffix = train_image_suffix
         self.val_image_suffix = val_image_suffix
+        self.fine_tuning_layers = fine_turning_layers
 
         # Placeholders
         self.training_set = None
@@ -300,6 +305,14 @@ class KerasPipeline(object):
         """ Build and compile model """
         print("{t:<20}: {model}".format(t="Model", model=self.name))
         model = self.model_generating_fn(training=True, model_ckpt=self.model_ckpt)
+        if self.model_weights_filename:
+            print("{t:<20}: {filename}".format(t="Model weights", filename=self.name))
+            model.load_weights(self.model_weights_filename, by_name=True)
+
+        if self.fine_tuning_layers:
+            for layer in model.layers[:-self.fine_tuning_layers]:
+                layer.trainable = False
+                print("[INFO] Layer {name} is now non-trainable".format(name=layer.name))
 
         print("{t:<20}: {reg}".format(t="Regularizer", reg=self.regularizer.__name__))
         print(json.dumps(self.regularizer_params))
