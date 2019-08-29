@@ -23,7 +23,9 @@ from typing import Callable, Tuple, Dict, List
 
 def QWK(y_true, y_pred):
     """ Quadratic weighted kappa """
-    pred = y_pred
+    pred = tf.cast(y_pred, tf.int32)
+    pred = tf.clip_by_value(tf.round(pred), 0, 4)
+    pred = tf.squeeze(pred)
 
     confusion = tf.math.confusion_matrix(y_true, pred, dtype=tf.int32)
     n_classes = 5
