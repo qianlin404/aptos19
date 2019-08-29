@@ -382,8 +382,7 @@ class KerasPipeline(object):
             model = tf.keras.utils.multi_gpu_model(model, self.multi_gpu, cpu_merge=False)
         print("{t:<20}: {loss}".format(t="Loss Function", loss=self.loss.__name__))
 
-        run_opts = tf.RunOptions(report_tensor_allocations_upon_oom=True)
-        model.compile(optimizer, loss=self.loss, metrics=self.eval_metrics, options=run_opts)
+        model.compile(optimizer, loss=self.loss, metrics=self.eval_metrics)
 
         print("{t:<20}: {filename}".format(t="Model checkpoint", filename=self.model_ckpt))
 
