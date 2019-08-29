@@ -362,36 +362,36 @@ class KerasPipeline(object):
         #     with tf.device("/cpu:0"):
         #         model = self.model_generating_fn(training=True, model_ckpt=self.model_ckpt)
         # else:
-        strategy = tf.distribute.MirroredStrategy()
+        # strategy = tf.distribute.MirroredStrategy()
 
-        with strategy.scope():
-            model = self.model_generating_fn(training=True, model_ckpt=self.model_ckpt)
+        # with strategy.scope():
+        model = self.model_generating_fn(training=True, model_ckpt=self.model_ckpt)
 
-            if self.model_weights_filename:
-                print("{t:<20}: {filename}".format(t="Model weights", filename=self.model_weights_filename))
-                model.load_weights(self.model_weights_filename, by_name=True)
+        if self.model_weights_filename:
+            print("{t:<20}: {filename}".format(t="Model weights", filename=self.model_weights_filename))
+            model.load_weights(self.model_weights_filename, by_name=True)
 
-            if self.fine_tuning_layers:
-                for layer in model.layers[:-self.fine_tuning_layers]:
-                    layer.trainable = False
-                    print("[INFO] Layer {name} is now non-trainable".format(name=layer.name))
+        if self.fine_tuning_layers:
+            for layer in model.layers[:-self.fine_tuning_layers]:
+                layer.trainable = False
+                print("[INFO] Layer {name} is now non-trainable".format(name=layer.name))
 
-            print("{t:<20}: {reg}".format(t="Regularizer", reg=self.regularizer.__name__))
-            print(json.dumps(self.regularizer_params))
-            self.regularizer(model, **self.regularizer_params)
+        print("{t:<20}: {reg}".format(t="Regularizer", reg=self.regularizer.__name__))
+        print(json.dumps(self.regularizer_params))
+        self.regularizer(model, **self.regularizer_params)
 
-            print("{t:<20}: {opt}".format(t="Optimizer", opt=self.optimizer.__name__))
-            print(json.dumps(self.optimizer_params))
-            optimizer = self.optimizer(**self.optimizer_params)
+        print("{t:<20}: {opt}".format(t="Optimizer", opt=self.optimizer.__name__))
+        print(json.dumps(self.optimizer_params))
+        optimizer = self.optimizer(**self.optimizer_params)
 
-            print("{t:<20}: {loss}".format(t="Loss Function", loss=self.loss.__name__))
+        print("{t:<20}: {loss}".format(t="Loss Function", loss=self.loss.__name__))
 
-            # if self.multi_gpu > 1:
-            #     print("Using %d GPUs for training" % self.multi_gpu)
-            #     model = tf.keras.utils.multi_gpu_model(model, self.multi_gpu, cpu_merge=False)
-            model.compile(optimizer, loss=self.loss, metrics=self.eval_metrics)
+        # if self.multi_gpu > 1:
+        #     print("Using %d GPUs for training" % self.multi_gpu)
+        #     model = tf.keras.utils.multi_gpu_model(model, self.multi_gpu, cpu_merge=False)
+        model.compile(optimizer, loss=self.loss, metrics=self.eval_metrics)
 
-            print("{t:<20}: {filename}".format(t="Model checkpoint", filename=self.model_ckpt))
+        print("{t:<20}: {filename}".format(t="Model checkpoint", filename=self.model_ckpt))
 
         return model
 
