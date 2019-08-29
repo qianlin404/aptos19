@@ -23,7 +23,21 @@ from typing import Callable, Tuple, Dict, List
 
 def QWK(y_true, y_pred):
     """ Quadratic weighted kappa """
-    return sklearn.metrics.cohen_kappa_score(y_true, y_pred, weights="quadratic")
+    pred = y_pred
+
+    confusion = tf.math.confusion_matrix(y_true, pred, dtype=tf.int32)
+    n_classes = 5
+
+    sum0 = tf.reduce_sum(confusion, axis=0)
+    sum1 = tf.reduce_sum(confusion, axis=1)
+    expected = tf.einsum('i,j->ij', sum0, sum1) / tf.reduce_sum(sum0)
+
+    w_mat = tf.zeros([n_classes, n_classes], dtype=tf.int32)
+    w_mat += tf.range(n_classes)
+    w_mat = (w_mat - tf.transpose(w_mat)) ** 2
+
+    k = tf.cast(tf.reduce_sum(w_mat * confusion), tf.double) / tf.reduce_sum(tf.cast(w_mat, tf.double) * expected)
+    return 1 - k
 
 
 class Postprocessor(object):
@@ -381,7 +395,7 @@ class KerasPipeline(object):
         y_true = np.concatenate(y_true)
         y_pred = np.concatenate(y_pred)
 
-        print("Quadratic weighted kappa: %.4f" % QWK(y_true, y_pred))
+        print("Quadratic weighted kappa: %.4f" % sklearn.metrics.cohen_kappa_score(y_true, y_pred, weights="quadratic"))
 
     def train(self):
         self._read_input()
