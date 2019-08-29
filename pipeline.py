@@ -358,7 +358,14 @@ class KerasPipeline(object):
     def _build_model(self):
         """ Build and compile model """
         print("{t:<20}: {model}".format(t="Model", model=self.name))
-        model = self.model_generating_fn(training=True, model_ckpt=self.model_ckpt)
+        if self.multi_gpu > 1:
+            with tf.device("/cpu:0"):
+                model = self.model_generating_fn(training=True, model_ckpt=self.model_ckpt)
+
+            print("Using %d GPUs for training" % self.multi_gpu)
+            model = tf.keras.utils.multi_gpu_model(model, self.multi_gpu, cpu_merge=False)
+        else:
+            model = self.model_generating_fn(training=True, model_ckpt=self.model_ckpt)
 
         if self.model_weights_filename:
             print("{t:<20}: {filename}".format(t="Model weights", filename=self.model_weights_filename))
@@ -377,9 +384,7 @@ class KerasPipeline(object):
         print(json.dumps(self.optimizer_params))
         optimizer = self.optimizer(**self.optimizer_params)
 
-        if self.multi_gpu > 1:
-            print("Using %d GPUs for training" % self.multi_gpu)
-            model = tf.keras.utils.multi_gpu_model(model, self.multi_gpu, cpu_merge=False)
+
         print("{t:<20}: {loss}".format(t="Loss Function", loss=self.loss.__name__))
 
         model.compile(optimizer, loss=self.loss, metrics=self.eval_metrics)
