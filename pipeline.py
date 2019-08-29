@@ -200,7 +200,8 @@ class KerasPipeline(object):
                  model_ckpt: str=None,
                  train_image_suffix: str=".png",
                  val_image_suffix: str=".png",
-                 fine_tuning_layers: int=None):
+                 fine_tuning_layers: int=None,
+                 multi_gpu=1):
         """
         Initializer
         Args:
@@ -229,6 +230,7 @@ class KerasPipeline(object):
             model_ckpt: checkpoint prefix
             train_image_suffix: suffix of image files
             fine_tuning_layers: last number of fine tuning layers
+            multi_gpu: the number of gpus
         """
         self.training_filename = training_filename
         self.validation_filename = validation_filename
@@ -256,6 +258,7 @@ class KerasPipeline(object):
         self.train_image_suffix = train_image_suffix
         self.val_image_suffix = val_image_suffix
         self.fine_tuning_layers = fine_tuning_layers
+        self.multi_gpu = multi_gpu
 
         # Placeholders
         self.training_set = None
@@ -356,6 +359,9 @@ class KerasPipeline(object):
         """ Build and compile model """
         print("{t:<20}: {model}".format(t="Model", model=self.name))
         model = self.model_generating_fn(training=True, model_ckpt=self.model_ckpt)
+        if self.multi_gpu > 1:
+            model = tf.keras.utils.multi_gpu_model(model, self.multi_gpu, cpu_merge=False)
+
         if self.model_weights_filename:
             print("{t:<20}: {filename}".format(t="Model weights", filename=self.model_weights_filename))
             model.load_weights(self.model_weights_filename, by_name=True)
