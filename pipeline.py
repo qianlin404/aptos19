@@ -42,6 +42,36 @@ def QWK(y_true, y_pred):
     return 1 - k
 
 
+class EarlyStopKappaCallback(tf.keras.callbacks.Callback):
+    """ Early stop based on kappa score """
+    def __init__(self, eval_func, save_path, patience):
+        super(tf.keras.callbacks.Callback, self).__init__()
+        self.eval_func = eval_func
+        self.save_path = save_path
+        self.highest_score = -1
+        self.cnt = 0
+        self.patient = patience
+
+    def on_epoch_end(self, epoch, logs=None):
+        cur_score = self.eval_func()
+        print("\n[INFO] Quadratic weighted kappa: %.4f" % cur_score)
+
+        if cur_score > self.highest_score:
+            print("\n[INFO] Hit a higher score {score}, saving model...".format(score=cur_score))
+            self.model.save_weights(self.save_path)
+            self.highest_score = cur_score
+            self.cnt = 0
+        else:
+            self.cnt += 1
+
+        if self.cnt > self.patient:
+            print("\n[INFO] score stop increasing, early stopping...")
+            self.model.stop_training = True
+
+            print("[INFO] restoring best model, quadratic weighted kappa: %.4f" % self.highest_score)
+            self.model.load_weights(self.save_path, by_name=True)
+
+
 class Postprocessor(object):
     """ convert model output to predicted labels """
     def get_predition(self, output_tensor: np.ndarray):
@@ -275,19 +305,17 @@ class KerasPipeline(object):
 
     def _get_callback(self):
         """ Get callbacks for the model """
-        checkpoint = tf.keras.callbacks.ModelCheckpoint(self.ckpt_path,
-                                                        monitor="val_QWK", save_best_only=True, save_weights_only=True,
-                                                        mode="max")
-        early_stop = tf.keras.callbacks.EarlyStopping(monitor="val_QWK", patience=5, mode="max",
-                                                      restore_best_weights=True, verbose=True)
+        early_stop_kappa = EarlyStopKappaCallback(self._quadratic_weighted_kappa,
+                                                  save_path=self.ckpt_path,
+                                                  patience=5)
+
         lr_decay = tf.keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=.5, patience=3, mode="min",
                                                         verbose=True)
 
         logdir = "tensorboard/" + self.record_name
         tensorboard = tf.keras.callbacks.TensorBoard(log_dir=logdir, write_graph=False, update_freq="epoch")
-        qwk_callback = tf.keras.callbacks.LambdaCallback(on_epoch_end=lambda epoch, logs: self._quadratic_weighted_kappa())
 
-        return [checkpoint, early_stop, lr_decay, tensorboard, qwk_callback]
+        return [early_stop_kappa, lr_decay, tensorboard]
 
     def _read_input(self):
         """ Run input """
@@ -397,7 +425,10 @@ class KerasPipeline(object):
         y_true = np.concatenate(y_true)
         y_pred = np.concatenate(y_pred)
 
-        print("Quadratic weighted kappa: %.4f" % sklearn.metrics.cohen_kappa_score(y_true, y_pred, weights="quadratic"))
+        score = sklearn.metrics.cohen_kappa_score(y_true, y_pred, weights="quadratic")
+        print("Quadratic weighted kappa: %.4f" % score)
+
+        return score
 
     def train(self):
         self._read_input()
