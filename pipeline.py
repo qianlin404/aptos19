@@ -27,7 +27,7 @@ def QWK(y_true, y_pred):
     pred = tf.clip_by_value(tf.round(pred), 0, 4)
     pred = tf.squeeze(pred)
 
-    confusion = tf.math.confusion_matrix(y_true, pred, dtype=tf.int32)
+    confusion = tf.math.confusion_matrix(y_true, pred, num_classes=5, dtype=tf.int32)
     n_classes = 5
 
     sum0 = tf.reduce_sum(confusion, axis=0)
