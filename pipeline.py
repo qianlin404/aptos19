@@ -21,6 +21,11 @@ from functools import partial
 from typing import Callable, Tuple, Dict, List
 
 
+def QWK(y_true, y_pred):
+    """ Quadratic weighted kappa """
+    return sklearn.metrics.cohen_kappa_score(y_true, y_pred, weights="quadratic")
+
+
 class Postprocessor(object):
     """ convert model output to predicted labels """
     def get_predition(self, output_tensor: np.ndarray):
@@ -255,17 +260,18 @@ class KerasPipeline(object):
     def _get_callback(self):
         """ Get callbacks for the model """
         checkpoint = tf.keras.callbacks.ModelCheckpoint(self.ckpt_path,
-                                                        monitor="val_loss", save_best_only=True, save_weights_only=True,
-                                                        mode="min")
-        early_stop = tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=8, mode="min",
+                                                        monitor="QWK", save_best_only=True, save_weights_only=True,
+                                                        mode="max")
+        early_stop = tf.keras.callbacks.EarlyStopping(monitor="QWK", patience=5, mode="max",
                                                       restore_best_weights=True, verbose=True)
         lr_decay = tf.keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=.5, patience=3, mode="min",
                                                         verbose=True)
 
         logdir = "tensorboard/" + self.record_name
         tensorboard = tf.keras.callbacks.TensorBoard(log_dir=logdir, write_graph=False, update_freq="epoch")
+        qwk_callback = tf.keras.callbacks.LambdaCallback(on_epoch_end=lambda epoch, logs: self._quadratic_weighted_kappa())
 
-        return [checkpoint, early_stop, lr_decay, tensorboard]
+        return [checkpoint, early_stop, lr_decay, tensorboard, qwk_callback]
 
     def _read_input(self):
         """ Run input """
@@ -337,39 +343,6 @@ class KerasPipeline(object):
 
         tf.reset_default_graph()
         eval_model = self.model_generating_fn(training=False)
-        if self.fine_tuning_layers:
-            for layer in eval_model.layers[:-self.fine_tuning_layers]:
-                layer.trainable = False
-
-        eval_model.load_weights(self.ckpt_path, by_name=True)
-
-        for i in range(len(self.val_generator)):
-            image, label = self.val_generator[i]
-            pred = eval_model.predict(image)
-            pred = self.postprocessor.get_predition(pred)
-            y_true.append(label)
-            y_pred.append(pred)
-
-        y_true = np.concatenate(y_true)
-        y_pred = np.concatenate(y_pred)
-
-        score = self.cv_fn(y_true, y_pred)
-        confusion_matrix = sklearn.metrics.confusion_matrix(y_true, y_pred)
-
-        result = {
-            self.cv_fn.__name__: score,
-            "confusion_matrix": confusion_matrix.tolist()
-        }
-        print("{metric_name}: {score:.2f}".format(metric_name=self.cv_fn.__name__, score=score))
-        return result
-
-    def _cv2(self):
-        """ Cross validation """
-        y_true = []
-        y_pred = []
-
-        tf.reset_default_graph()
-        eval_model = self.model_generating_fn(training=False)
 
         eval_model.load_weights(os.path.join(self._get_save_dir(), "final.h5"), by_name=True)
 
@@ -390,7 +363,7 @@ class KerasPipeline(object):
             self.cv_fn.__name__: score,
             "confusion_matrix": confusion_matrix.tolist()
         }
-        print("{metric_name}: {score:.2f}".format(metric_name=self.cv_fn.__name__, score=score))
+        print("{metric_name}: {score:.4f}".format(metric_name=self.cv_fn.__name__, score=score))
         return result
 
     def _quadratic_weighted_kappa(self):
@@ -408,7 +381,7 @@ class KerasPipeline(object):
         y_true = np.concatenate(y_true)
         y_pred = np.concatenate(y_pred)
 
-        return sklearn.metrics.cohen_kappa_score(y_true, y_pred)
+        print("Quadratic weighted kappa: %.4f" % QWK(y_true, y_pred))
 
     def train(self):
         self._read_input()
@@ -426,7 +399,6 @@ class KerasPipeline(object):
         self.model.save_weights(os.path.join(self._get_save_dir(), "final.h5"))
 
         cv_result = self._cv()
-        self._cv2()
         self.eval = cv_result
 
         self.write_config()
