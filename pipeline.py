@@ -202,6 +202,7 @@ class KerasPipeline(object):
                  train_image_suffix: str=".png",
                  val_image_suffix: str=".png",
                  fine_tuning_layers: int=None,
+                 save_dir="models",
                  multi_gpu=1):
         """
         Initializer
@@ -231,6 +232,7 @@ class KerasPipeline(object):
             model_ckpt: checkpoint prefix
             train_image_suffix: suffix of image files
             fine_tuning_layers: last number of fine tuning layers
+            save_dir: dir to save weights
             multi_gpu: the number of gpus
         """
         self.training_filename = training_filename
@@ -259,6 +261,7 @@ class KerasPipeline(object):
         self.train_image_suffix = train_image_suffix
         self.val_image_suffix = val_image_suffix
         self.fine_tuning_layers = fine_tuning_layers
+        self.save_dir = save_dir
         self.multi_gpu = multi_gpu
 
         # Placeholders
@@ -304,7 +307,7 @@ class KerasPipeline(object):
             f.write(json.dumps(config))
 
     def _get_save_dir(self):
-        folder_name = os.path.join("models", self.record_name)
+        folder_name = os.path.join(self.save_dir, self.record_name)
         return folder_name
 
     def _get_callback(self):
@@ -316,7 +319,7 @@ class KerasPipeline(object):
         lr_decay = tf.keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=.5, patience=3, mode="min",
                                                         verbose=True)
 
-        logdir = "tensorboard/" + self.record_name
+        logdir = os.path.join(self.save_dir, "tensorboard/" + self.record_name)
         tensorboard = tf.keras.callbacks.TensorBoard(log_dir=logdir, write_graph=False, update_freq="epoch")
 
         return [early_stop_kappa, lr_decay, tensorboard]
