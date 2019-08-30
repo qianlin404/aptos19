@@ -133,9 +133,9 @@ def load_images(image_filename, labels, image_size, format):
     image = tf.read_file(image_filename)
 
     if format == "png":
-        image = tf.image.decode_png(image)
+        image = tf.image.decode_png(image, channels=3)
     elif format == "jpeg":
-        image = tf.image.decode_jpeg(image)
+        image = tf.image.decode_jpeg(image, channels=3)
     else:
         raise ValueError("Unkonwn format: %s" % format)
 
@@ -145,6 +145,7 @@ def load_images(image_filename, labels, image_size, format):
         return image, labels
     else:
         return image
+
 
 def augment_image(image_filename, labels, image_size, format):
     """ Load and resize image and perform augmentation """

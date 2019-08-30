@@ -439,18 +439,16 @@ class KerasPipeline(object):
         #     y_true.append(label)
         #     y_pred.append(pred)
 
-        for i, row in self.validation_set[["path", "diagnosis"]].iterrows():
-            image = Image.open(row["path"]).resize((eval_model.input_shape[0],) * 2)
-            image = np.array(image, dtype=np.uint8)
-            image = np.expand_dims(image, axis=0)
+        val_dataset = tf.data.Dataset.from_tensor_slices(self.validation_set["path"])
+        load_fn = partial(preprocess.load_images, labels=None, image_size=self.image_size,
+                          format=self.val_image_suffix[1:])
+        val_dataset = val_dataset.map(load_fn)
+        val_dataset = val_dataset.batch(self.batch_size)
 
-            pred = eval_model.predict(image)
-            pred = self.postprocessor.get_predition(pred)
-            y_true.append(row["diagnosis"])
-            y_pred.append(pred)
+        output = self.model.predict(val_dataset).ravel()
 
-        y_true = np.concatenate(y_true)
-        y_pred = np.concatenate(y_pred)
+        y_pred = self.postprocessor.get_predition(output)
+        y_true = self.validation_set["diagnosis"].values
 
         score = self.cv_fn(y_true, y_pred)
         confusion_matrix = sklearn.metrics.confusion_matrix(y_true, y_pred)
