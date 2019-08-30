@@ -385,14 +385,14 @@ class KerasPipeline(object):
     def _build_model(self):
         """ Build and compile model """
         print("{t:<20}: {model}".format(t="Model", model=self.name))
-        # if self.multi_gpu > 1:
-        #     with tf.device("/cpu:0"):
-        #         model = self.model_generating_fn(training=True, model_ckpt=self.model_ckpt)
-        # else:
-        # strategy = tf.distribute.MirroredStrategy()
+        if self.multi_gpu > 1:
+            with tf.device("/cpu:0"):
+                model = self.model_generating_fn(training=True, model_ckpt=self.model_ckpt)
+        else:
+            # strategy = tf.distribute.MirroredStrategy()
 
-        # with strategy.scope():
-        model = self.model_generating_fn(training=True, model_ckpt=self.model_ckpt)
+            # with strategy.scope():
+            model = self.model_generating_fn(training=True, model_ckpt=self.model_ckpt)
 
         if self.model_weights_filename:
             print("{t:<20}: {filename}".format(t="Model weights", filename=self.model_weights_filename))
@@ -413,9 +413,9 @@ class KerasPipeline(object):
 
         print("{t:<20}: {loss}".format(t="Loss Function", loss=self.loss.__name__))
 
-        # if self.multi_gpu > 1:
-        #     print("Using %d GPUs for training" % self.multi_gpu)
-        #     model = tf.keras.utils.multi_gpu_model(model, self.multi_gpu, cpu_merge=False)
+        if self.multi_gpu > 1:
+            print("Using %d GPUs for training" % self.multi_gpu)
+            model = tf.keras.utils.multi_gpu_model(model, self.multi_gpu, cpu_merge=False)
         model.compile(optimizer, loss=self.loss, metrics=self.eval_metrics)
 
         print("{t:<20}: {filename}".format(t="Model checkpoint", filename=self.model_ckpt))
@@ -464,8 +464,8 @@ class KerasPipeline(object):
 
     def _quadratic_weighted_kappa(self):
         """ compute quadratic weighted kappa on validation set """
-        y_true = []
-        y_pred = []
+        # y_true = []
+        # y_pred = []
 
         # for i in range(len(self.val_generator)):
         #     image, label = self.val_generator[i]
@@ -474,7 +474,12 @@ class KerasPipeline(object):
         #     y_true.append(label)
         #     y_pred.append(pred)
 
-        y_pred = self.model.predict(self.validation_set["path"]).ravel()
+        val_dataset = tf.data.Dataset.from_tensor_slices(self.validation_set["path"])
+        load_fn = partial(preprocess.load_images, labels=None, image_size=self.image_size,
+                          format=self.val_image_suffix[1:])
+        val_dataset = val_dataset.map(load_fn)
+
+        y_pred = self.model.predict(val_dataset).ravel()
         y_true = self.validation_set["diagnosis"].values
 
         score = sklearn.metrics.cohen_kappa_score(y_true, y_pred, weights="quadratic")
