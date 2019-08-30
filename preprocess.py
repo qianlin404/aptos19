@@ -141,7 +141,7 @@ def load_images(image_filename, labels, image_size, format):
 
     image = tf.image.resize_images(image, size=image_size, method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
 
-    if labels:
+    if labels is not None:
         return image, labels
     else:
         return image
