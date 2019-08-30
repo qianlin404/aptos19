@@ -140,8 +140,11 @@ def load_images(image_filename, labels, image_size, format):
         raise ValueError("Unkonwn format: %s" % format)
 
     image = tf.image.resize_images(image, size=image_size, method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
-    return image, labels
 
+    if labels:
+        return image, labels
+    else:
+        return image
 
 def augment_image(image_filename, labels, image_size, format):
     """ Load and resize image and perform augmentation """
