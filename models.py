@@ -87,11 +87,11 @@ def _clip_output(logit):
     return tf.clip_by_value(logit, 0.0, 4.0, name="clip_by_value")
 
 
-def get_efficientnet(model_name, training: bool=True, model_ckpt: str=None, regression=False):
+def get_efficientnet(model_name, training: bool=True, model_ckpt: str=None, regression=False, image_size=None):
     """ Build efficientnet_b0 and load pre-trained weights """
     model_param = efficientnet_builder.efficientnet_params(model_name)
     _, global_params = efficientnet_builder.get_model_params(model_name, {})
-    image_size = model_param[2]
+    image_size = model_param[2] if not image_size else image_size
 
     inputs = tf.keras.layers.Input(shape=(image_size, image_size, 3), dtype=tf.uint8, name="image_tensor")
 
