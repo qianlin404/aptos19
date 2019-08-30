@@ -439,7 +439,7 @@ class KerasPipeline(object):
         #     y_true.append(label)
         #     y_pred.append(pred)
 
-        for i, row in self.validation_set[["path", "diagnosis"]]:
+        for i, row in self.validation_set[["path", "diagnosis"]].iterrows():
             image = Image.open(row["path"]).resize((eval_model.input_shape[0],) * 2)
             image = np.array(image, dtype=np.uint8)
             image = np.expand_dims(image, axis=0)
