@@ -480,7 +480,11 @@ class KerasPipeline(object):
         val_dataset = val_dataset.map(load_fn)
         val_dataset = val_dataset.batch(self.batch_size)
 
-        y_pred = self.model.predict(val_dataset).ravel()
+        pred = self.model.predict(val_dataset).ravel()
+
+        y_pred = []
+        for score in pred:
+            y_pred.append(self.postprocessor.get_predition(score))
         y_true = self.validation_set["diagnosis"].values
 
         score = sklearn.metrics.cohen_kappa_score(y_true, y_pred, weights="quadratic")
