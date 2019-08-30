@@ -445,7 +445,7 @@ class KerasPipeline(object):
         val_dataset = val_dataset.map(load_fn)
         val_dataset = val_dataset.batch(self.batch_size)
 
-        output = self.model.predict(val_dataset).ravel()
+        output = eval_model.predict(val_dataset).ravel()
 
         y_pred = self.postprocessor.get_predition(output)
         y_true = self.validation_set["diagnosis"].values
