@@ -12,6 +12,7 @@ import tensorflow as tf
 import cv2
 import matplotlib.pyplot as plt
 import image_augment
+import autoaugment
 
 from typing import List, Tuple, Callable, Dict
 
@@ -125,6 +126,28 @@ def crop_and_ben_normalized(filenames: List[str], image_size: Tuple):
     preprocessed_image = [crop_image_from_gray(image) for image in preprocessed_image]
 
     return preprocessed_image
+
+
+def load_images(image_filename, labels, image_size, format):
+    """ Load and resize image """
+    image = tf.read_file(image_filename)
+
+    if format == "png":
+        image = tf.image.decode_png(image)
+    elif format == "jpeg":
+        image = tf.image.decode_jpeg(image)
+    else:
+        raise ValueError("Unkonwn format: %s" % format)
+
+    image = tf.image.resize_images(image, size=image_size, method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+    return image, labels
+
+
+def augment_image(image_filename, labels, image_size, format):
+    """ Load and resize image and perform augmentation """
+    image, labels = load_images(image_filename, labels, image_size, format)
+    image = autoaugment.distort_image_with_autoaugment(image, 'v0')
+    return image, labels
 
 
 class ImageGenerator(tf.keras.utils.Sequence):

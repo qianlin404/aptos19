@@ -19,6 +19,7 @@ from scipy import optimize
 from pathlib import Path
 from functools import partial
 from typing import Callable, Tuple, Dict, List
+from PIL import Image
 
 
 def QWK(y_true, y_pred):
@@ -355,6 +356,29 @@ class KerasPipeline(object):
 
         return train, val
 
+    def _get_input_dataset(self):
+        """ Return input dataset for training and validation data """
+        print("[INFO] Loading training data as tf.data.Dataset")
+        train = tf.data.Dataset.from_tensor_slices((self.training_set["path"], self.training_set["diagnosis"]))
+
+        print("[INFO] Performing auto augmentation on training data...")
+        train_aug_fn = partial(preprocess.augment_image, image_size=self.image_size, format=self.train_image_suffix[1:])
+        train = train.map(train_aug_fn)
+        train = train.shuffle(buffer_size=10000)
+        train = train.batch(batch_size=self.batch_size)
+
+        print("[INFO] Loading validation data as tf.data.Dataset")
+        val_load_fn = partial(preprocess.load_images, image_size=self.image_size, format=self.val_image_suffix[1:])
+        val = tf.data.Dataset.from_tensor_slices((self.validation_set["path"], self.validation_set["diagnosis"]))
+        val = val.map(val_load_fn)
+        val = val.shuffle(buffer_size=10000)
+        val = val.batch(batch_size=self.batch_size)
+
+        print("{t:<20}: {batch_size}".format(t="Batch size", batch_size=self.batch_size))
+        print("{t:<20}: {image_size}".format(t="Image size", image_size=self.image_size))
+
+        return train, val
+
     def _build_model(self):
         """ Build and compile model """
         print("{t:<20}: {model}".format(t="Model", model=self.name))
@@ -405,11 +429,21 @@ class KerasPipeline(object):
 
         eval_model.load_weights(os.path.join(self._get_save_dir(), "final.h5"), by_name=True)
 
-        for i in range(len(self.val_generator)):
-            image, label = self.val_generator[i]
+        # for i in range(len(self.val_generator)):
+        #     image, label = self.val_generator[i]
+        #     pred = eval_model.predict(image)
+        #     pred = self.postprocessor.get_predition(pred)
+        #     y_true.append(label)
+        #     y_pred.append(pred)
+
+        for i, row in self.validation_set[["path", "diagnosis"]]:
+            image = Image.open(row["path"]).resize((eval_model.input_shape[0],) * 2)
+            image = np.array(image, dtype=np.uint8)
+            image = np.expand_dims(image, axis=0)
+
             pred = eval_model.predict(image)
             pred = self.postprocessor.get_predition(pred)
-            y_true.append(label)
+            y_true.append(row["diagnosis"])
             y_pred.append(pred)
 
         y_true = np.concatenate(y_true)
@@ -430,15 +464,15 @@ class KerasPipeline(object):
         y_true = []
         y_pred = []
 
-        for i in range(len(self.val_generator)):
-            image, label = self.val_generator[i]
-            pred = self.model.predict(image)
-            pred = self.postprocessor.get_predition(pred)
-            y_true.append(label)
-            y_pred.append(pred)
+        # for i in range(len(self.val_generator)):
+        #     image, label = self.val_generator[i]
+        #     pred = self.model.predict(image)
+        #     pred = self.postprocessor.get_predition(pred)
+        #     y_true.append(label)
+        #     y_pred.append(pred)
 
-        y_true = np.concatenate(y_true)
-        y_pred = np.concatenate(y_pred)
+        y_pred = self.model.predict(self.validation_set["path"]).ravel()
+        y_true = self.validation_set["diagnosis"].values
 
         score = sklearn.metrics.cohen_kappa_score(y_true, y_pred, weights="quadratic")
         print("Quadratic weighted kappa: %.4f" % score)
@@ -447,12 +481,19 @@ class KerasPipeline(object):
 
     def train(self):
         self._read_input()
-        self.train_generator, self.val_generator = self._get_input_generator()
+        self.train_generator, self.val_generator = self._get_input_dataset()
+        # self.train_generator, self.val_generator = self._get_input_generator()
         self.model = self._build_model()
 
-        self.model.fit_generator(self.train_generator, steps_per_epoch=len(self.train_generator),
-                                 validation_data=self.val_generator, validation_steps=len(self.val_generator),
-                                 epochs=self.num_epochs, callbacks=self._get_callback())
+        self.model.fit(x=self.train_generator,
+                       epochs=self.num_epochs,
+                       callbacks=self._get_callback(),
+                       validation_data=self.val_generator,
+                       shuffle=True)
+
+        # self.model.fit_generator(self.train_generator, steps_per_epoch=len(self.train_generator),
+        #                          validation_data=self.val_generator, validation_steps=len(self.val_generator),
+        #                          epochs=self.num_epochs, callbacks=self._get_callback())
 
         if self.fine_tuning_layers:
             for layer in self.model.layers[:-self.fine_tuning_layers]:

@@ -11,6 +11,9 @@ import tensorflow.keras.backend as K
 import numpy as np
 import efficientnet_builder
 import efficientnet_model
+import autoaugment
+
+from functools import partial
 
 
 def get_inception_resnet_v2(training: bool=True, model_ckpt: str=None):
@@ -91,6 +94,7 @@ def get_efficientnet(model_name, training: bool=True, model_ckpt: str=None, regr
     image_size = model_param[2]
 
     inputs = tf.keras.layers.Input(shape=(image_size, image_size, 3), dtype=tf.uint8, name="image_tensor")
+
     features = _get_efficientnet(inputs, model_name=model_name, training=training, model_ckpt=model_ckpt)
 
     with tf.variable_scope("head"):
