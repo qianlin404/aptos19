@@ -432,23 +432,26 @@ class KerasPipeline(object):
 
         eval_model.load_weights(os.path.join(self._get_save_dir(), "final.h5"), by_name=True)
 
-        # for i in range(len(self.val_generator)):
-        #     image, label = self.val_generator[i]
-        #     pred = eval_model.predict(image)
-        #     pred = self.postprocessor.get_predition(pred)
-        #     y_true.append(label)
-        #     y_pred.append(pred)
+        for i in range(len(self.val_generator)):
+            image, label = self.val_generator[i]
+            pred = eval_model.predict(image)
+            pred = self.postprocessor.get_predition(pred)
+            y_true.append(label)
+            y_pred.append(pred)
 
-        val_dataset = tf.data.Dataset.from_tensor_slices(self.validation_set["path"])
-        load_fn = partial(preprocess.load_images, labels=None, image_size=self.image_size,
-                          format=self.val_image_suffix[1:])
-        val_dataset = val_dataset.map(load_fn)
-        val_dataset = val_dataset.batch(self.batch_size)
+        # val_dataset = tf.data.Dataset.from_tensor_slices(self.validation_set["path"])
+        # load_fn = partial(preprocess.load_images, labels=None, image_size=self.image_size,
+        #                   format=self.val_image_suffix[1:])
+        # val_dataset = val_dataset.map(load_fn)
+        # val_dataset = val_dataset.batch(self.batch_size)
+        #
+        # output = eval_model.predict(val_dataset).ravel()
+        #
+        # y_pred = self.postprocessor.get_predition(output)
+        # y_true = self.validation_set["diagnosis"].values
 
-        output = eval_model.predict(val_dataset).ravel()
-
-        y_pred = self.postprocessor.get_predition(output)
-        y_true = self.validation_set["diagnosis"].values
+        y_true = np.concatenate(y_true)
+        y_pred = np.concatenate(y_pred)
 
         score = self.cv_fn(y_true, y_pred)
         confusion_matrix = sklearn.metrics.confusion_matrix(y_true, y_pred)
@@ -462,26 +465,29 @@ class KerasPipeline(object):
 
     def _quadratic_weighted_kappa(self):
         """ compute quadratic weighted kappa on validation set """
-        # y_true = []
-        # y_pred = []
+        y_true = []
+        y_pred = []
 
-        # for i in range(len(self.val_generator)):
-        #     image, label = self.val_generator[i]
-        #     pred = self.model.predict(image)
-        #     pred = self.postprocessor.get_predition(pred)
-        #     y_true.append(label)
-        #     y_pred.append(pred)
+        for i in range(len(self.val_generator)):
+            image, label = self.val_generator[i]
+            pred = self.model.predict(image)
+            pred = self.postprocessor.get_predition(pred)
+            y_true.append(label)
+            y_pred.append(pred)
 
-        val_dataset = tf.data.Dataset.from_tensor_slices(self.validation_set["path"])
-        load_fn = partial(preprocess.load_images, labels=None, image_size=self.image_size,
-                          format=self.val_image_suffix[1:])
-        val_dataset = val_dataset.map(load_fn)
-        val_dataset = val_dataset.batch(self.batch_size)
+        # val_dataset = tf.data.Dataset.from_tensor_slices(self.validation_set["path"])
+        # load_fn = partial(preprocess.load_images, labels=None, image_size=self.image_size,
+        #                   format=self.val_image_suffix[1:])
+        # val_dataset = val_dataset.map(load_fn)
+        # val_dataset = val_dataset.batch(self.batch_size)
+        #
+        # output = self.model.predict(val_dataset).ravel()
+        #
+        # y_pred = self.postprocessor.get_predition(output)
+        # y_true = self.validation_set["diagnosis"].values
 
-        output = self.model.predict(val_dataset).ravel()
-
-        y_pred = self.postprocessor.get_predition(output)
-        y_true = self.validation_set["diagnosis"].values
+        y_true = np.concatenate(y_true)
+        y_pred = np.concatenate(y_pred)
 
         score = sklearn.metrics.cohen_kappa_score(y_true, y_pred, weights="quadratic")
         print("Quadratic weighted kappa: %.4f" % score)
@@ -490,19 +496,19 @@ class KerasPipeline(object):
 
     def train(self):
         self._read_input()
-        self.train_generator, self.val_generator = self._get_input_dataset()
-        # self.train_generator, self.val_generator = self._get_input_generator()
+        # self.train_generator, self.val_generator = self._get_input_dataset()
+        self.train_generator, self.val_generator = self._get_input_generator()
         self.model = self._build_model()
 
-        self.model.fit(x=self.train_generator,
-                       epochs=self.num_epochs,
-                       callbacks=self._get_callback(),
-                       validation_data=self.val_generator,
-                       shuffle=True)
+        # self.model.fit(x=self.train_generator,
+        #                epochs=self.num_epochs,
+        #                callbacks=self._get_callback(),
+        #                validation_data=self.val_generator,
+        #                shuffle=True)
 
-        # self.model.fit_generator(self.train_generator, steps_per_epoch=len(self.train_generator),
-        #                          validation_data=self.val_generator, validation_steps=len(self.val_generator),
-        #                          epochs=self.num_epochs, callbacks=self._get_callback())
+        self.model.fit_generator(self.train_generator, steps_per_epoch=len(self.train_generator),
+                                 validation_data=self.val_generator, validation_steps=len(self.val_generator),
+                                 epochs=self.num_epochs, callbacks=self._get_callback())
 
         if self.fine_tuning_layers:
             for layer in self.model.layers[:-self.fine_tuning_layers]:
