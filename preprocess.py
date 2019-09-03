@@ -206,7 +206,7 @@ class ImageGenerator(tf.keras.utils.Sequence):
         else:
             labels = self._image_data.iloc[batch]["diagnosis"].values
 
-        if self._is_augment:
+        if self._is_augment and self._augment_policy:
             seq = image_augment.generate_iaa_sequence(self._augment_policy)
             images = seq.augment_images(images)
 
