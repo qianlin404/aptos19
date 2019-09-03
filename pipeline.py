@@ -203,7 +203,7 @@ class KerasPipeline(object):
                  val_image_suffix: str=".png",
                  fine_tuning_layers: int=None,
                  save_dir="models",
-                 multi_gpu=1):
+                 patience=5):
         """
         Initializer
         Args:
@@ -262,7 +262,7 @@ class KerasPipeline(object):
         self.val_image_suffix = val_image_suffix
         self.fine_tuning_layers = fine_tuning_layers
         self.save_dir = save_dir
-        self.multi_gpu = multi_gpu
+        self.patience = patience
 
         # Placeholders
         self.training_set = None
@@ -314,7 +314,7 @@ class KerasPipeline(object):
         """ Get callbacks for the model """
         early_stop_kappa = EarlyStopKappaCallback(self._quadratic_weighted_kappa,
                                                   save_path=self.ckpt_path,
-                                                  patience=5)
+                                                  patience=self.patience)
 
         lr_decay = tf.keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=.5, patience=3, mode="min",
                                                         verbose=True)
