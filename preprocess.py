@@ -183,18 +183,16 @@ class ImageGenerator(tf.keras.utils.Sequence):
         """ Return a generator that generate (images, label) tuple """
         i = self._batch_index[item]
         images = self._load_fn(self._image_data["path"].iloc[i], self._image_size)
+        images = self._preprocess_fn(images)
 
         if self._is_test:
             labels = None
         else:
             labels = self._image_data.iloc[i]["diagnosis"].values
 
-        if self._is_augment:
+        if self._is_augment and self._augment_policy:
             seq = image_augment.generate_iaa_sequence(self._augment_policy)
             images = seq.augment_images(images)
-
-        images = self._preprocess_fn(images)
-
         return images, labels
 
     def show_sample(self):
