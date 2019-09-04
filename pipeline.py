@@ -52,14 +52,19 @@ class EarlyStopKappaCallback(tf.keras.callbacks.Callback):
         self.highest_score = -1
         self.cnt = 0
         self.patient = patience
+        self.saved_models = []
 
     def on_epoch_end(self, epoch, logs=None):
         cur_score = self.eval_func()
         print("\n[INFO] Quadratic weighted kappa: %.4f" % cur_score)
 
         if cur_score > self.highest_score:
-            print("\n[INFO] Hit a higher score {score}, saving model...".format(score=cur_score))
-            self.model.save_weights(self.save_path)
+            save_path = os.path.join(self.save_path, "train={train_loss:.4f}_val={val_loss:.4f}.h5"
+                                     .format(train_loss=logs["loss"], val_loss=logs["val_loss"]))
+            print("\n[INFO] Hit a higher score {score}, saving model to {path}...".format(score=cur_score,
+                                                                                          path=save_path))
+            self.saved_models.append(save_path)
+            self.model.save_weights(save_path)
             self.highest_score = cur_score
             self.cnt = 0
         else:
@@ -69,10 +74,10 @@ class EarlyStopKappaCallback(tf.keras.callbacks.Callback):
             print("\n[INFO] score stop increasing, early stopping...")
             self.model.stop_training = True
 
-            print("[INFO] restoring best model, quadratic weighted kappa: %.4f" % self.highest_score)
-            save_path = os.path.join(self.save_path, "train={train_loss:.4f}_val={val_loss:.4f}.h5"
-                                     .format(train_loss=logs["loss"], val_loss=logs["val_loss"]))
-            self.model.load_weights(save_path, by_name=True)
+            print("[INFO] restoring best model {model_path}, quadratic weighted kappa: {score:.4f}"
+                  .format(model_path=self.saved_models[-1], score=self.highest_score))
+
+            self.model.load_weights(self.saved_models[-1], by_name=True)
 
 
 class Postprocessor(object):
