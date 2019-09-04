@@ -70,7 +70,9 @@ class EarlyStopKappaCallback(tf.keras.callbacks.Callback):
             self.model.stop_training = True
 
             print("[INFO] restoring best model, quadratic weighted kappa: %.4f" % self.highest_score)
-            self.model.load_weights(self.save_path, by_name=True)
+            save_path = os.path.join(self.save_path, "train={train_loss:.4f}_val={val_loss:.4f}.h5"
+                                     .format(train_loss=logs["loss"], val_loss=logs["val_loss"]))
+            self.model.load_weights(save_path, by_name=True)
 
 
 class Postprocessor(object):
@@ -277,7 +279,7 @@ class KerasPipeline(object):
         self.record_name = record_name
         os.makedirs(self._get_save_dir(), exist_ok=True)
 
-        self.ckpt_path = os.path.join(self._get_save_dir(), "weights.best.h5")
+        self.ckpt_path = self._get_save_dir()
 
     def write_config(self):
         input_config = dict(training_filename=self.training_filename,
