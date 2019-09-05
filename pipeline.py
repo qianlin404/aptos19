@@ -59,7 +59,7 @@ class EarlyStopKappaCallback(tf.keras.callbacks.Callback):
         print("\n[INFO] Quadratic weighted kappa: %.4f" % cur_score)
 
         if cur_score > self.highest_score:
-            save_path = os.path.join(self.save_path, "train={train_loss:.4f}_val={val_loss:.4f}.h5"
+            save_path = os.path.join(self.save_path, "train{train_loss:.4f}val{val_loss:.4f}.h5"
                                      .format(train_loss=logs["loss"], val_loss=logs["val_loss"]))
             print("\n[INFO] Hit a higher score {score}, saving model to {path}...".format(score=cur_score,
                                                                                           path=save_path))
