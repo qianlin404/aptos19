@@ -276,18 +276,18 @@ def get_operation_pool():
         iaa.Sometimes(.7, iaa.Affine(rotate=(-30, 30)), name="rotate_30_0.7"),
         iaa.Sometimes(.3, iaa.Affine(shear=(-16, 16)), name="shear_16_0.3"),
         iaa.Sometimes(.7, iaa.Affine(shear=(-16, 16)), name="shear_16_0.7"),
-        iaa.Sometimes(.3, iaa.Lambda(func_images=color_wrap), name="color_0.3"),
-        iaa.Sometimes(.7, iaa.Lambda(func_images=color_wrap), name="color_0.7"),
-        iaa.Sometimes(.3, iaa.Lambda(func_images=solarize_60_wrap), name="solarize_60_0.3"),
-        iaa.Sometimes(.7, iaa.Lambda(func_images=solarize_60_wrap), name="solarize_60_0.7"),
-        iaa.Sometimes(.3, iaa.Lambda(func_images=solarize_80_wrap), name="solarize_80_0.3"),
-        iaa.Sometimes(.7, iaa.Lambda(func_images=solarize_80_wrap), name="solarize_80_0.7"),
-        iaa.Sometimes(.3, iaa.Lambda(func_images=posterize_wrap_3), name="posterize_3_0.3"),
-        iaa.Sometimes(.7, iaa.Lambda(func_images=posterize_wrap_3), name="posterize_3_0.7"),
-        iaa.Sometimes(.3, iaa.Lambda(func_images=posterize_wrap_6), name="posterize_6_0.3"),
-        iaa.Sometimes(.7, iaa.Lambda(func_images=posterize_wrap_6), name="posterize_6_0.7"),
-        iaa.Sometimes(.3, iaa.Lambda(func_images=cutout_wrap), name="cutout_0.3"),
-        iaa.Sometimes(.7, iaa.Lambda(func_images=cutout_wrap), name="cutout_0.7")
+        iaa.Sometimes(.3, iaa.Lambda(func_images=color_wrap, func_keypoints=None), name="color_0.3"),
+        iaa.Sometimes(.7, iaa.Lambda(func_images=color_wrap, func_keypoints=None), name="color_0.7"),
+        iaa.Sometimes(.3, iaa.Lambda(func_images=solarize_60_wrap, func_keypoints=None), name="solarize_60_0.3"),
+        iaa.Sometimes(.7, iaa.Lambda(func_images=solarize_60_wrap, func_keypoints=None), name="solarize_60_0.7"),
+        iaa.Sometimes(.3, iaa.Lambda(func_images=solarize_80_wrap, func_keypoints=None), name="solarize_80_0.3"),
+        iaa.Sometimes(.7, iaa.Lambda(func_images=solarize_80_wrap, func_keypoints=None), name="solarize_80_0.7"),
+        iaa.Sometimes(.3, iaa.Lambda(func_images=posterize_wrap_3, func_keypoints=None), name="posterize_3_0.3"),
+        iaa.Sometimes(.7, iaa.Lambda(func_images=posterize_wrap_3, func_keypoints=None), name="posterize_3_0.7"),
+        iaa.Sometimes(.3, iaa.Lambda(func_images=posterize_wrap_6, func_keypoints=None), name="posterize_6_0.3"),
+        iaa.Sometimes(.7, iaa.Lambda(func_images=posterize_wrap_6, func_keypoints=None), name="posterize_6_0.7"),
+        iaa.Sometimes(.3, iaa.Lambda(func_images=cutout_wrap, func_keypoints=None), name="cutout_0.3"),
+        iaa.Sometimes(.7, iaa.Lambda(func_images=cutout_wrap, func_keypoints=None), name="cutout_0.7")
     ]
 
 
