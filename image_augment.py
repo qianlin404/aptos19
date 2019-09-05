@@ -270,8 +270,8 @@ def get_operation_pool():
 
     return [
         iaa.Fliplr(.5, name="fliplr_0.5"),
-        iaa.Sometimes(.3, iaa.Lambda(func_images=equalize_wrap), name="equalize_0.3"),
-        iaa.Sometimes(.7, iaa.Lambda(func_images=equalize_wrap, name="euqalize_0.7")),
+        iaa.Sometimes(.3, iaa.Lambda(func_images=equalize_wrap, func_keypoints=None), name="equalize_0.3"),
+        iaa.Sometimes(.7, iaa.Lambda(func_images=equalize_wrap, func_keypoints=None, name="euqalize_0.7")),
         iaa.Sometimes(.3, iaa.Affine(rotate=(-30, 30)), name="rotate_30_0.3"),
         iaa.Sometimes(.7, iaa.Affine(rotate=(-30, 30)), name="rotate_30_0.7"),
         iaa.Sometimes(.3, iaa.Affine(shear=(-16, 16)), name="shear_16_0.3"),
@@ -298,7 +298,7 @@ def generate_iaa_sequence(policy: List):
                                             iaa.ContrastNormalization((0.9, 1.1), per_channel=0.5)]))]
 
     body_aug = policy[np.random.randint(0, len(policy))]
-    tail_aug = [iaa.Lambda(func_images=cutout_wrap, name="cutout")]
+    tail_aug = [iaa.Lambda(func_images=cutout_wrap, func_keypoints=None, name="cutout")]
     
     seq = iaa.Sequential(head_aug+body_aug+tail_aug)
 
