@@ -350,7 +350,7 @@ class KerasPipeline(object):
 
         # lr_decay = tf.keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=.5, patience=3, mode="min",
         #                                                 verbose=True)
-        lr_decay = tf.keras.callbacks.LearningRateScheduler(self.lr_fn)
+        lr_decay = tf.keras.callbacks.LearningRateScheduler(self.lr_fn, verbose=True)
 
         logdir = os.path.join(self.save_dir, "tensorboard/" + self.record_name)
         tensorboard = tf.keras.callbacks.TensorBoard(log_dir=logdir, write_graph=False, update_freq="epoch")
