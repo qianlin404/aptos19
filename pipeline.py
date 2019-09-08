@@ -43,6 +43,27 @@ def QWK(y_true, y_pred):
     return 1 - k
 
 
+class CosineLRScheduler(object):
+    """ Consine learning rate scheduler """
+    def __init__(self, lr_min, lr_max, t_i, t_mul):
+        self.lr_min = lr_min
+        self.lr_max = lr_max
+        self.t_i = t_i
+        self.t_mul = t_mul
+        self.t_cur = 0
+
+    def __call__(self, epoch):
+        """ Get current learning rate """
+        lr = self.lr_min + .5 * (self.lr_max - self.lr_min) * (1 + np.cos(self.t_cur/self.t_i*np.pi))
+
+        self.t_cur += 1
+        if self.t_cur == self.t_i:
+            self.t_cur = 0
+            self.t_i = self.t_i * self.t_mul
+
+        return lr
+
+
 class EarlyStopKappaCallback(tf.keras.callbacks.Callback):
     """ Early stop based on kappa score """
     def __init__(self, eval_func, save_path, patience):
@@ -59,8 +80,9 @@ class EarlyStopKappaCallback(tf.keras.callbacks.Callback):
         print("\n[INFO] Quadratic weighted kappa: %.4f" % cur_score)
 
         if cur_score > self.highest_score:
-            save_path = os.path.join(self.save_path, "train{train_loss:.4f}val{val_loss:.4f}.h5"
-                                     .format(train_loss=logs["loss"], val_loss=logs["val_loss"]))
+            # save_path = os.path.join(self.save_path, "train{train_loss:.4f}val{val_loss:.4f}.h5"
+            #                          .format(train_loss=logs["loss"], val_loss=logs["val_loss"]))
+            save_path = os.path.join(self.save_path, "final.h5")
             print("\n[INFO] Hit a higher score {score}, saving model to {path}...".format(score=cur_score,
                                                                                           path=save_path))
             self.saved_models.append(save_path)
@@ -70,14 +92,14 @@ class EarlyStopKappaCallback(tf.keras.callbacks.Callback):
         else:
             self.cnt += 1
 
-        if self.cnt > self.patient:
-            print("\n[INFO] score stop increasing, early stopping...")
-            self.model.stop_training = True
-
-            print("[INFO] restoring best model {model_path}, quadratic weighted kappa: {score:.4f}"
-                  .format(model_path=self.saved_models[-1], score=self.highest_score))
-
-            self.model.load_weights(self.saved_models[-1], by_name=True)
+        # if self.cnt > self.patient:
+        #     print("\n[INFO] score stop increasing, early stopping...")
+        #     self.model.stop_training = True
+        #
+        #     print("[INFO] restoring best model {model_path}, quadratic weighted kappa: {score:.4f}"
+        #           .format(model_path=self.saved_models[-1], score=self.highest_score))
+        #
+        #     self.model.load_weights(self.saved_models[-1], by_name=True)
 
 
 class Postprocessor(object):
@@ -203,6 +225,7 @@ class KerasPipeline(object):
                  cv_fn: Callable,
                  name: str,
                  record_name: str,
+                 lr_fn: Callable,
                  model_weights_filename=None,
                  val_image_dir=None,
                  model_ckpt: str=None,
@@ -234,6 +257,7 @@ class KerasPipeline(object):
             cv_fn: Cross validation function
             name: name of this run
             record_name: name of this running
+            lr_fn: learning rate scheduler function
             model_weights_filename: filename of model weights, default to none
             val_image_dir: validation set image directory
             model_ckpt: checkpoint prefix
@@ -270,6 +294,7 @@ class KerasPipeline(object):
         self.fine_tuning_layers = fine_tuning_layers
         self.save_dir = save_dir
         self.patience = patience
+        self.lr_fn = lr_fn
 
         # Placeholders
         self.training_set = None
@@ -323,8 +348,9 @@ class KerasPipeline(object):
                                                   save_path=self.ckpt_path,
                                                   patience=self.patience)
 
-        lr_decay = tf.keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=.5, patience=3, mode="min",
-                                                        verbose=True)
+        # lr_decay = tf.keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=.5, patience=3, mode="min",
+        #                                                 verbose=True)
+        lr_decay = tf.keras.callbacks.LearningRateScheduler(self.lr_fn)
 
         logdir = os.path.join(self.save_dir, "tensorboard/" + self.record_name)
         tensorboard = tf.keras.callbacks.TensorBoard(log_dir=logdir, write_graph=False, update_freq="epoch")
