@@ -32,6 +32,14 @@ def load_default(filenames: List[str], size=(299, 299)) -> np.ndarray:
     return np.concatenate(res)
 
 
+def load_crop_background(filenames: List[str], size):
+    """ Load and crop background """
+    res = [cv2.resize(_load_image(f), size) for f in filenames]
+    res = [crop_image_from_gray(img) for img in res]
+
+    return res
+
+
 def _load_image(filename: str) -> np.ndarray:
     """
     Load single image and resize
@@ -156,7 +164,7 @@ def augment_image(image_filename, labels, image_size, format):
 
 class ImageGenerator(tf.keras.utils.Sequence):
     """ Generate batched images """
-    def __init__(self, df: pd.DataFrame, batch_size: int, image_size: Tuple, load_fn: Callable, augment_policy: List,
+    def __init__(self, df: pd.DataFrame, batch_size: int, image_size: Tuple, load_fn: Callable, augment_seq,
                 preprocess_fn: Callable, is_test: bool=False, is_augment: bool=False, seed=404):
         self._image_data = df
         self._batch_size = batch_size
@@ -166,7 +174,7 @@ class ImageGenerator(tf.keras.utils.Sequence):
         self._is_test = is_test
         self._is_augment = is_augment
         self._load_fn = load_fn
-        self._augment_policy = augment_policy
+        self._augment_seq = augment_seq
 
         np.random.seed(self._seed)
         indexes = np.array([i for i in range(self._image_data.shape[0])])
@@ -190,9 +198,8 @@ class ImageGenerator(tf.keras.utils.Sequence):
         else:
             labels = self._image_data.iloc[i]["diagnosis"].values
 
-        if self._is_augment and self._augment_policy:
-            seq = image_augment.generate_iaa_sequence(self._augment_policy)
-            images = seq.augment_images(images)
+        if self._is_augment and self._augment_seq:
+            images = self._augment_seq.augment_images(images)
         return images, labels
 
     def show_sample(self):
@@ -206,9 +213,8 @@ class ImageGenerator(tf.keras.utils.Sequence):
         else:
             labels = self._image_data.iloc[batch]["diagnosis"].values
 
-        if self._is_augment and self._augment_policy:
-            seq = image_augment.generate_iaa_sequence(self._augment_policy)
-            images = seq.augment_images(images)
+        if self._is_augment and self._augment_seq:
+            images = self._augment_seq.augment_images(images)
 
         num_row = int(np.ceil(len(images) / 5))
 

@@ -208,7 +208,7 @@ class KerasPipeline(object):
                  validation_filename: str,
                  train_image_dir: str,
                  load_fn: Callable,
-                 augment_policy: List,
+                 augment_seq,
                  augment_config: Dict,
                  preprocess_fn: Callable,
                  postprocessor: Postprocessor,
@@ -271,7 +271,7 @@ class KerasPipeline(object):
         self.train_image_dir = train_image_dir
         self.val_image_dir = val_image_dir if val_image_dir else train_image_dir
         self.load_fn = load_fn
-        self.augment_policy = augment_policy
+        self.augment_seq = augment_seq
         self.augment_config = augment_config
         self.preprocess_fn = preprocess_fn
         self.postprocessor = postprocessor
@@ -378,13 +378,13 @@ class KerasPipeline(object):
         """ Return input generator for trainning validation data """
         print("Loading trainning data...")
         train = preprocess.ImageGenerator(self.training_set, image_size=self.image_size, batch_size=self.batch_size,
-                                          preprocess_fn=self.preprocess_fn, augment_policy=self.augment_policy,
+                                          preprocess_fn=self.preprocess_fn, augment_seq=self.augment_seq,
                                           load_fn=self.load_fn, is_augment=True)
         train.show_sample()
 
         print("Loading validation data...")
         val = preprocess.ImageGenerator(self.validation_set, image_size=self.image_size, batch_size=self.batch_size,
-                                        preprocess_fn=self.preprocess_fn, augment_policy=self.augment_policy,
+                                        preprocess_fn=self.preprocess_fn, augment_seq=self.augment_seq,
                                         load_fn=self.load_fn, is_augment=False)
         val.show_sample()
         print("{t:<20}: {batch_size}".format(t="Batch size", batch_size=self.batch_size))
